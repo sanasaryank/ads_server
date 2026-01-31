@@ -33,6 +33,45 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher';
 
 const DRAWER_WIDTH = 280;
 
+// Extracted menu item styles for consistency and reusability
+const menuItemStyles = {
+  base: {
+    '&:hover': {
+      bgcolor: 'action.hover',
+    },
+  },
+  active: {
+    bgcolor: 'action.selected',
+    '&:hover': {
+      bgcolor: 'action.selected',
+    },
+  },
+};
+
+const menuItemIconStyles = {
+  active: {
+    color: 'primary.main',
+  },
+  inactive: {
+    color: 'inherit',
+  },
+};
+
+const menuItemTextStyles = {
+  active: {
+    '& .MuiListItemText-primary': {
+      color: 'primary.main',
+      fontWeight: 600,
+    },
+  },
+  inactive: {
+    '& .MuiListItemText-primary': {
+      color: 'inherit',
+      fontWeight: 400,
+    },
+  },
+};
+
 interface MenuItem {
   id: string;
   labelKey: string;
@@ -125,22 +164,13 @@ export const MainLayout = () => {
           <ListItemButton
             onClick={() => handleItemClick(item)}
             sx={{
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-              ...(isActive && {
-                bgcolor: 'action.selected',
-                '&:hover': {
-                  bgcolor: 'action.selected',
-                },
-              }),
+              ...menuItemStyles.base,
+              ...(isActive && menuItemStyles.active),
             }}
           >
             {item.icon && (
               <ListItemIcon
-                sx={{
-                  color: isActive ? 'primary.main' : 'inherit',
-                }}
+                sx={isActive ? menuItemIconStyles.active : menuItemIconStyles.inactive}
               >
                 {item.icon}
               </ListItemIcon>
@@ -149,10 +179,7 @@ export const MainLayout = () => {
               primary={t(item.labelKey)}
               sx={{
                 pl: !item.icon && depth > 0 ? 2 : 0,
-                '& .MuiListItemText-primary': {
-                  color: isActive ? 'primary.main' : 'inherit',
-                  fontWeight: isActive ? 600 : 400,
-                },
+                ...(isActive ? menuItemTextStyles.active : menuItemTextStyles.inactive),
               }}
             />
             {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}

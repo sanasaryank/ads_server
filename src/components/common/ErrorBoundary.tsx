@@ -14,12 +14,14 @@ interface ErrorBoundaryProps extends WithTranslation {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetKeys?: string[]; // Keys that when changed will reset the error boundary
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  resetCount: number; // Used to force remount of children
 }
 
 /**
@@ -32,6 +34,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       hasError: false,
       error: null,
       errorInfo: null,
+      resetCount: 0,
     };
   }
 
@@ -179,7 +182,8 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       );
     }
 
-    return this.props.children;
+    // Add key to force remount on reset
+    return <React.Fragment key={this.state.resetCount}>{this.props.children}</React.Fragment>;
   }
 }
 

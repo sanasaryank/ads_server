@@ -1,8 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton, Menu, MenuItem, ListItemText, Box } from '@mui/material';
 import { Language as LanguageIcon } from '@mui/icons-material';
-import { useState } from 'react';
 
 const languages = [
   { code: 'hy', name: 'Հայերեն', flag: '🇦🇲' },

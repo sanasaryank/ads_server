@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSnackbar } from 'notistack';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/logger';
@@ -109,6 +109,7 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
 ): UseEntityListReturn<TEntity, TFilters> {
   const { t } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
+  const isMountedRef = useRef(true);
   
   const [entities, setEntities] = useState<TEntity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,19 +122,28 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
 
   const fetchData = useCallback(async () => {
     try {
+      if (!isMountedRef.current) return;
       setLoading(true);
       const data = await config.fetchList();
+      if (!isMountedRef.current) return;
       setEntities(data);
     } catch (error) {
+      if (!isMountedRef.current) return;
       logger.error(`Error loading ${config.entityName} list`, error as Error);
       enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [config.fetchList, config.entityName, enqueueSnackbar, t]);
 
   useEffect(() => {
     fetchData();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchData]);
 
   const refetch = useCallback(async () => {
