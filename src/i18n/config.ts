@@ -24,7 +24,13 @@ i18n
   .init({
     resources,
     fallbackLng: 'hy', // Armenian as default
-    lng: localStorage.getItem('language') || 'hy',
+    lng: (() => {
+      try {
+        return localStorage.getItem('language') || 'hy';
+      } catch (error) {
+        return 'hy';
+      }
+    })(),
 
     interpolation: {
       escapeValue: false,

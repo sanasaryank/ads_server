@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     } else {
       setIsChecking(false);
     }
-  }, []);
+  }, [isAuthenticated, user, checkAuth]);
 
   if (isLoading || isChecking) {
     return (

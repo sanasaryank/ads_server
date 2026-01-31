@@ -12,7 +12,7 @@ const CAMPAIGNS_BASE_URL = `${env.apiBaseUrl}${API_ENDPOINTS.campaigns}`;
 
 // Transform API response to internal format
 const transformFromApi = (apiCampaign: ApiCampaign): Campaign & { hash?: string } => ({
-  id: apiCampaign.id as unknown as number,
+  id: apiCampaign.id,
   advertiserId: apiCampaign.advertiserId,
   name: apiCampaign.name,
   description: apiCampaign.description,
@@ -35,12 +35,19 @@ const transformFromApi = (apiCampaign: ApiCampaign): Campaign & { hash?: string 
     menuTypesMode: apiCampaign.menuTypesMode,
     menuTypes: apiCampaign.menuTypes,
     slots: apiCampaign.slots,
-  // Clean up invalid schedule IDs (NaN, undefined, null)
-  targets: apiCampaign.targets.map(target => ({
+  // Clean up invalid schedule IDs with robust validation
+  targets: (apiCampaign.targets || []).map(target => ({
     ...target,
-    slots: target.slots.map(slot => ({
+    slots: (target.slots || []).map(slot => ({
       ...slot,
-      schedules: slot.schedules.filter(id => id && id !== 'NaN' && id !== 'undefined' && id !== 'null'),
+      schedules: (slot.schedules || []).filter(id => {
+        const trimmed = String(id).trim();
+        return trimmed && 
+               trimmed !== 'NaN' && 
+               trimmed !== 'undefined' && 
+               trimmed !== 'null' &&
+               /^[a-zA-Z0-9_-]+$/.test(trimmed); // Validate ID format
+      }),
       placements: slot.placements || []
     }))
   })),
@@ -93,7 +100,7 @@ export const realCampaignsApi = {
   /**
    * Get single campaign by ID (with hash for editing)
    */
-  getById: async (id: number): Promise<Campaign & { hash?: string }> => {
+  getById: async (id: string | number): Promise<Campaign & { hash?: string }> => {
     const response = await realApiFetch(`${CAMPAIGNS_BASE_URL}/${id}`, {
       method: 'GET',
     });
@@ -117,7 +124,7 @@ export const realCampaignsApi = {
   /**
    * Update existing campaign
    */
-  update: async (id: number, data: CampaignFormData & { hash: string }): Promise<Campaign> => {
+  update: async (id: string | number, data: CampaignFormData & { hash: string }): Promise<Campaign> => {
     const payload = {
       id: String(id),
       ...transformToApi(data),
@@ -134,7 +141,7 @@ export const realCampaignsApi = {
   /**
    * Block/unblock campaign
    */
-  block: async (id: number, blocked: boolean): Promise<void> => {
+  block: async (id: string | number, blocked: boolean): Promise<void> => {
     await realApiFetch(`${CAMPAIGNS_BASE_URL}/${id}/block`, {
       method: 'PATCH',
       body: JSON.stringify({ isBlocked: blocked }),

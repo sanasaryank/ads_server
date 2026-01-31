@@ -372,7 +372,7 @@ export const RestaurantCampaignsModal = memo(({
                         onChange={handleToggleAll}
                       />
                     </TableCell>
-                    <TableCell>{t('campaigns.fields.campaign')}</TableCell>
+                    <TableCell>{t('campaigns.fields.name')}</TableCell>
                     <TableCell>{t('campaigns.fields.advertiser')}</TableCell>
                     <TableCell>{t('campaigns.fields.slot')}</TableCell>
                     <TableCell>{t('campaigns.fields.startDate')}</TableCell>

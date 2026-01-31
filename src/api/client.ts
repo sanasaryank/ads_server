@@ -183,11 +183,11 @@ export const apiRequestWithRetry = async <T>(
  * HTTP Methods
  */
 export const api = {
-  get: <T>(endpoint: string) => apiRequestWithRetry<T>(endpoint, 'GET'),
-  post: <T>(endpoint: string, body: unknown) => apiRequestWithRetry<T>(endpoint, 'POST', body),
-  put: <T>(endpoint: string, body: unknown) => apiRequestWithRetry<T>(endpoint, 'PUT', body),
-  patch: <T>(endpoint: string, body: unknown) => apiRequestWithRetry<T>(endpoint, 'PATCH', body),
-  delete: <T>(endpoint: string) => apiRequestWithRetry<T>(endpoint, 'DELETE'),
+  get: <T>(endpoint: string, signal?: AbortSignal) => apiRequestWithRetry<T>(endpoint, 'GET', undefined, 3, signal),
+  post: <T>(endpoint: string, body: unknown, signal?: AbortSignal) => apiRequestWithRetry<T>(endpoint, 'POST', body, 3, signal),
+  put: <T>(endpoint: string, body: unknown, signal?: AbortSignal) => apiRequestWithRetry<T>(endpoint, 'PUT', body, 3, signal),
+  patch: <T>(endpoint: string, body: unknown, signal?: AbortSignal) => apiRequestWithRetry<T>(endpoint, 'PATCH', body, 3, signal),
+  delete: <T>(endpoint: string, signal?: AbortSignal) => apiRequestWithRetry<T>(endpoint, 'DELETE', undefined, 3, signal),
 };
 
 export default api;

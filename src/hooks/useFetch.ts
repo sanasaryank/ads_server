@@ -80,16 +80,25 @@ function useFetch<T>(
   }, deps);
 
   const refetch = useCallback(async () => {
+    const abortController = new AbortController();
+    
     try {
       setLoading(true);
       setError(null);
       const result = await fetchFn();
-      setData(result);
+      
+      if (!abortController.signal.aborted) {
+        setData(result);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('An error occurred'));
-      setData(null);
+      if (!abortController.signal.aborted) {
+        setError(err instanceof Error ? err : new Error('An error occurred'));
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [fetchFn]);
 
