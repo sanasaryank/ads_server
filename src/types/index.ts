@@ -319,7 +319,8 @@ export interface Advertiser {
   updatedAt: number;
 }
 
-export interface Campaign extends BaseEntity {
+export interface Campaign extends Omit<BaseEntity, 'id'> {
+  id: string | number;
   advertiserId: string;
   name: DictionaryName;
   description?: string;

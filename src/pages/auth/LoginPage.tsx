@@ -57,7 +57,12 @@ export const LoginPage = () => {
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
-    localStorage.setItem('language', languageCode);
+    try {
+      localStorage.setItem('language', languageCode);
+    } catch (error) {
+      // Language still changes in memory, just not persisted
+      console.warn('Failed to save language preference:', error);
+    }
     handleLanguageMenuClose();
   };
 

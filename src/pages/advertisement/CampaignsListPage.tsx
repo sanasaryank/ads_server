@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Stack, Typography, Tabs, Tab, Dialog, DialogTitle, DialogContent, IconButton as MuiIconButton } from '@mui/material';
 import { Add as AddIcon, FilterList as FilterListIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -17,6 +17,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FormField } from '../../components/ui/molecules';
 import { formatDate } from '../../utils/dateUtils';
 import { PageHeader, FiltersContainer } from '../../components/ui/styled';
+import { useAdvertisersStore } from '../../store/advertisersStore';
+import { useDictionariesStore } from '../../store/dictionariesStore';
+import { useRestaurantsStore } from '../../store/restaurantsStore';
 
 const createCampaignSchema = (t: (key: string) => string) =>
   z.object({
@@ -198,6 +201,15 @@ export default memo(function CampaignsListPage() {
   const watchedRestaurantTypesMode = useWatch({ control, name: 'restaurantTypesMode' });
   const watchedRestaurantTypeIds = useWatch({ control, name: 'restaurantTypes' });
   const watchedMenuTypesMode = useWatch({ control, name: 'menuTypesMode' });
+
+  // Cleanup stores on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      useAdvertisersStore.getState().clear();
+      useDictionariesStore.getState().clear();
+      useRestaurantsStore.getState().clear();
+    };
+  }, []);
   const watchedMenuTypeIds = useWatch({ control, name: 'menuTypes' });
 
   const handleOpenDialog = useCallback(async (campaign?: Campaign) => {

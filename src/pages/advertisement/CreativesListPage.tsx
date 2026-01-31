@@ -441,7 +441,7 @@ export default memo(function CreativesListPage() {
     setPage(1);
   }, [debouncedSearch, filters.status, filters.campaignId]);
 
-  const campaignOptions = useMemo(() => campaigns.map(c => ({ value: c.id, label: getDisplayName(c.name) })), [campaigns, getDisplayName]);
+  const campaignOptions = useMemo(() => campaigns.map(c => ({ value: String(c.id), label: getDisplayName(c.name) })), [campaigns, getDisplayName]);
 
   if (loading) {
     return <Box sx={{ p: 3 }}>{t('common.loading')}</Box>;

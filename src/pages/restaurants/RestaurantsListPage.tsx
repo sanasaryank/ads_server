@@ -155,6 +155,14 @@ export const RestaurantsListPage = memo(() => {
     }
   }, [dictionaries, setAllDictionaries]);
 
+  // Cleanup stores on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      useAdvertisersStore.getState().clear();
+      useDictionariesStore.getState().clear();
+    };
+  }, []);
+
   const {
     countries = [],
     cities = [],
