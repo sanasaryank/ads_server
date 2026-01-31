@@ -49,6 +49,7 @@ function useFetch<T>(
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     const abortController = new AbortController();
 
     const executeFetch = async () => {

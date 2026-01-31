@@ -139,6 +139,7 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
   }, [config.fetchList, config.entityName, enqueueSnackbar, t]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchData();
     
     return () => {

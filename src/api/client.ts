@@ -5,6 +5,7 @@
 
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { parseApiError, ApiError } from './errors';
 
 /**
  * API configuration object
@@ -72,6 +73,9 @@ const sleep = (ms: number): Promise<void> =>
  * Check if error is retryable (network errors, 5xx, timeout)
  */
 const isRetryableError = (error: unknown): boolean => {
+  if (error instanceof ApiError) {
+    return error.isRetryable();
+  }
   if (error instanceof TypeError) {
     // Network errors (fetch failures)
     return true;
@@ -79,10 +83,6 @@ const isRetryableError = (error: unknown): boolean => {
   if (error instanceof Error) {
     // Timeout errors
     if (error.name === 'AbortError' || error.message.includes('timeout')) {
-      return true;
-    }
-    // 5xx server errors
-    if (error.message.match(/API Error: 5\d\d/)) {
       return true;
     }
   }
@@ -112,16 +112,34 @@ export const apiRequest = async <T>(
     logger.api(method, endpoint, response.status, duration);
 
     if (!response.ok) {
-      const error = new Error(`API Error: ${response.status} ${response.statusText}`);
-      logger.error(`API request failed: ${method} ${endpoint}`, error, {
+      const apiError = await parseApiError(response);
+      logger.error(`API request failed: ${method} ${endpoint}`, apiError, {
         status: response.status,
         statusText: response.statusText,
+        errorCode: apiError.errorCode,
+        errorMessage: apiError.errorMessage,
       });
-      throw error;
+      throw apiError;
     }
 
-    const data = await response.json();
-    return data;
+    // Handle empty responses (204 No Content, 205 Reset Content)
+    if (response.status === 204 || response.status === 205) {
+      return null as T;
+    }
+
+    // Check content type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return data;
+    }
+
+    // Non-JSON response for successful request
+    logger.warn(`Non-JSON response for ${method} ${endpoint}`, {
+      contentType,
+      status: response.status,
+    });
+    return null as T;
   } catch (error) {
     const duration = performance.now() - startTime;
     logger.api(method, endpoint, undefined, duration);

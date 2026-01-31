@@ -1,6 +1,37 @@
 /**
- * Error Boundary Component
- * Catches React errors and provides fallback UI
+ * Error Boundary Component - Resettable Boundary Pattern
+ * 
+ * A reusable error boundary that catches React errors and provides fallback UI.
+ * Supports automatic reset on prop changes (e.g., navigation) via resetKeys.
+ * 
+ * @example Basic usage
+ * ```tsx
+ * <ErrorBoundary>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * @example With reset on route changes
+ * ```tsx
+ * const location = useLocation();
+ * <ErrorBoundary resetKeys={[location.pathname]}>
+ *   <Routes />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * @example With custom fallback
+ * ```tsx
+ * <ErrorBoundary fallback={<CustomErrorUI />}>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * @example With error handler
+ * ```tsx
+ * <ErrorBoundary onError={(error, errorInfo) => sendToAnalytics(error)}>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
  */
 
 import React, { Component, type ReactNode, type ErrorInfo } from 'react';
@@ -10,22 +41,73 @@ import { withTranslation, type WithTranslation } from 'react-i18next';
 import { logger } from '../../utils/logger';
 import { navigationService } from '../../utils/navigationService';
 
+/**
+ * Props for ErrorBoundary component
+ */
 interface ErrorBoundaryProps extends WithTranslation {
+  /** Child components to wrap with error boundary */
   children: ReactNode;
+  
+  /** 
+   * Custom fallback UI to display when error occurs.
+   * If not provided, default error UI will be shown.
+   */
   fallback?: ReactNode;
+  
+  /** 
+   * Callback invoked when an error is caught.
+   * Useful for logging to external services (Sentry, analytics, etc.)
+   * @param error - The error that was thrown
+   * @param errorInfo - React error info with component stack
+   */
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
-  resetKeys?: string[]; // Keys that when changed will reset the error boundary
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
-  resetCount: number; // Used to force remount of children
+  
+  /** 
+   * Array of keys that trigger boundary reset when changed.
+   * When any value in this array changes, the error boundary automatically
+   * clears its error state and remounts children.
+   * 
+   * Common use cases:
+   * - Route changes: `resetKeys={[location.pathname]}`
+   * - User changes: `resetKeys={[user?.id]}`
+   * - Data dependencies: `resetKeys={[projectId, userId]}`
+   * 
+   * Implementation: Uses componentDidUpdate to detect changes and increments
+   * resetCount to trigger remount via Fragment key.
+   */
+  resetKeys?: string[];
 }
 
 /**
- * Error Boundary to catch and handle React component errors
+ * State for ErrorBoundary component
+ */
+interface ErrorBoundaryState {
+  /** Whether an error has been caught */
+  hasError: boolean;
+  
+  /** The caught error object */
+  error: Error | null;
+  
+  /** React error info with component stack trace */
+  errorInfo: ErrorInfo | null;
+  
+  /** 
+   * Counter incremented on each reset to force remount of children.
+   * Used as Fragment key to trigger React reconciliation.
+   */
+  resetCount: number;
+}
+
+/**
+ * Error Boundary component implementing the Resettable Boundary Pattern.
+ * 
+ * Features:
+ * - Catches errors in child component tree
+ * - Provides default and custom fallback UI
+ * - Automatic reset on prop changes (via resetKeys)
+ * - Manual reset via user action
+ * - Error logging integration
+ * - Development mode debugging support
  */
 class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
@@ -39,6 +121,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    // Update state so the next render will show the fallback UI
     return {
       hasError: true,
       error,
@@ -51,23 +134,67 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       componentStack: errorInfo.componentStack,
     });
 
-    // Call custom error handler if provided
+    // Call custom error handler if provided (e.g., send to Sentry)
     this.props.onError?.(error, errorInfo);
 
-    // Update state with error info
+    // Update state with additional error info
     this.setState({
       errorInfo,
     });
   }
 
+  /**
+   * Implements the Resettable Boundary Pattern.
+   * Automatically resets error state when resetKeys change.
+   * 
+   * This allows the boundary to recover from errors when the context changes,
+   * such as navigating to a different route or changing user/data context.
+   */
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    // Only proceed if resetKeys are provided
+    if (!this.props.resetKeys || !prevProps.resetKeys) {
+      return;
+    }
+
+    // Check if any resetKey has changed
+    const keysChanged = this.props.resetKeys.some(
+      (key, index) => key !== prevProps.resetKeys?.[index]
+    );
+    
+    // Reset error state and increment resetCount to force remount
+    if (keysChanged && this.state.hasError) {
+      logger.info('Error boundary reset triggered by resetKeys change', {
+        oldKeys: prevProps.resetKeys,
+        newKeys: this.props.resetKeys,
+      });
+      
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+        resetCount: this.state.resetCount + 1,
+      });
+    }
+  }
+
+  /**
+   * Manually reset error boundary state.
+   * Triggered by user clicking "Try Again" button.
+   */
   handleReset = (): void => {
+    logger.info('Error boundary manual reset triggered');
     this.setState({
       hasError: false,
       error: null,
       errorInfo: null,
+      resetCount: this.state.resetCount + 1,
     });
   };
 
+  /**
+   * Reload the entire page.
+   * Triggered by user clicking "Reload Page" button.
+   */
   handleReload = (): void => {
     navigationService.reload();
   };
@@ -182,27 +309,70 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       );
     }
 
-    // Add key to force remount on reset
+    // Render children wrapped in Fragment with resetCount as key
+    // The key changes on reset, forcing React to unmount and remount children
     return <React.Fragment key={this.state.resetCount}>{this.props.children}</React.Fragment>;
   }
 }
 
 /**
- * Hook for error boundaries in functional components
- * Wraps component with error boundary
+ * Higher-Order Component (HOC) to wrap any component with error boundary.
+ * 
+ * @example
+ * ```tsx
+ * const SafeComponent = withErrorBoundary(MyComponent, {
+ *   onError: (error) => sendToSentry(error),
+ * });
+ * ```
+ * 
+ * @param Component - The component to wrap with error boundary
+ * @param errorBoundaryProps - Props to pass to ErrorBoundary (excluding children)
+ * @returns Wrapped component with error boundary
  */
 export const withErrorBoundary = <P extends object>(
   Component: React.ComponentType<P>,
   errorBoundaryProps?: Omit<ErrorBoundaryProps, 'children' | 't' | 'i18n' | 'tReady'>,
 ) => {
-  return (props: P) => (
+  const WrappedComponent = (props: P) => (
     <ErrorBoundary {...errorBoundaryProps}>
       <Component {...props} />
     </ErrorBoundary>
   );
+  
+  // Preserve display name for debugging
+  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name || 'Component'})`;
+  
+  return WrappedComponent;
 };
 
-// Export wrapped component with translation HOC
+/**
+ * ErrorBoundary component wrapped with translation HOC.
+ * This is the main export that should be used in most cases.
+ * 
+ * @example Basic usage
+ * ```tsx
+ * import { ErrorBoundary } from './components/common/ErrorBoundary';
+ * 
+ * <ErrorBoundary>
+ *   <App />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * @example With automatic reset on navigation
+ * ```tsx
+ * import { ErrorBoundary } from './components/common/ErrorBoundary';
+ * import { useLocation } from 'react-router-dom';
+ * 
+ * function AppWithBoundary() {
+ *   const location = useLocation();
+ *   return (
+ *     <ErrorBoundary resetKeys={[location.pathname]}>
+ *       <Routes />
+ *     </ErrorBoundary>
+ *   );
+ * }
+ * ```
+ */
 export const ErrorBoundary = withTranslation()(ErrorBoundaryComponent);
 
 export default ErrorBoundary;

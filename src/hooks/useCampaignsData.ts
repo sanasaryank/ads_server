@@ -162,6 +162,7 @@ export const useCampaignsData = () => {
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     loadInitialData();
     
     return () => {

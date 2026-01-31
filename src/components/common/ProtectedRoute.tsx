@@ -14,6 +14,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     // Only check auth if we're not already authenticated
     if (!isAuthenticated && !user) {
       checkAuth().finally(() => {
