@@ -494,6 +494,7 @@ export default memo(function CreativesListPage() {
   
   // Lazy load HTML for visible creatives
   useEffect(() => {
+    isMountedRef.current = true;
     const loadVisibleHtml = async () => {
       const promises = paginatedCreatives.map(async (creative) => {
         if (creative.dataUrl.startsWith('http') && !htmlCache[creative.dataUrl] && !htmlLoading[creative.dataUrl] && !htmlErrors[creative.dataUrl]) {
@@ -547,6 +548,7 @@ export default memo(function CreativesListPage() {
   
   // Cleanup on unmount - clear caches to prevent memory leaks
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       setHtmlCache({});
