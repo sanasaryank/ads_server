@@ -16,11 +16,11 @@ export type { UseFiltersReturn } from './useFilters';
 export { default as useFetch } from './useFetch';
 export type { UseFetchReturn } from './useFetch';
 
-export { useCampaignsData } from './useCampaignsData';
-export type { CampaignsData } from './useCampaignsData';
+export { useCampaignsData, createCampaignsDataCallback } from './useCampaignsData';
+export type { CampaignsData, UseCampaignsDataOptions, UseCampaignsDataCallbacks } from './useCampaignsData';
 
-export { useCreativesData } from './useCreativesData';
-export type { CreativesData } from './useCreativesData';
+export { useCreativesData, createCreativesDataCallback } from './useCreativesData';
+export type { CreativesData, UseCreativesDataOptions, UseCreativesDataCallbacks } from './useCreativesData';
 
 export { default as useAuditLog } from './useAuditLog';
 export type { UseAuditLogProps, UseAuditLogReturn } from './useAuditLog';
@@ -51,11 +51,11 @@ export type { CommonFilterOptions } from './useCommonFilters';
 // Advanced hooks for entity management
 export { default as useFormDialog } from './useFormDialog';
 export type { UseFormDialogConfig, UseFormDialogReturn } from './useFormDialog';
-export { default as useEditWithLoading } from './useEditWithLoading';
-export type { UseEditWithLoadingConfig, UseEditWithLoadingReturn } from './useEditWithLoading';
+export { default as useEditWithLoading, createEditErrorCallback } from './useEditWithLoading';
+export type { UseEditWithLoadingConfig, UseEditWithLoadingReturn, UseEditWithLoadingCallbacks } from './useEditWithLoading';
 
-export { default as useEntityList } from './useEntityList';
-export type { UseEntityListConfig, UseEntityListReturn } from './useEntityList';
+export { default as useEntityList, createSnackbarCallbacks } from './useEntityList';
+export type { UseEntityListConfig, UseEntityListReturn, UseEntityListCallbacks } from './useEntityList';
 
 export { default as usePagination } from './usePagination';
 

@@ -1,7 +1,80 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useSnackbar } from 'notistack';
+import { useSnackbar, type VariantType } from 'notistack';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/logger';
+
+/**
+ * Helper to create default UI callbacks using snackbar notifications.
+ * This decouples the hook from UI concerns while providing easy opt-in for standard behavior.
+ * 
+ * @example
+ * ```tsx
+ * const { t } = useTranslation();
+ * const { enqueueSnackbar } = useSnackbar();
+ * 
+ * const entityList = useEntityList({
+ *   // ... other config
+ *   callbacks: createSnackbarCallbacks(enqueueSnackbar, t),
+ * });
+ * ```
+ */
+export function createSnackbarCallbacks(
+  enqueueSnackbar: (message: string, options?: { variant?: VariantType }) => void,
+  t: (key: string) => string
+): UseEntityListCallbacks {
+  return {
+    onLoadError: () => {
+      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+    },
+    onUpdateSuccess: () => {
+      enqueueSnackbar(t('common.updatedSuccessfully'), { variant: 'success' });
+    },
+    onUpdateError: () => {
+      enqueueSnackbar(t('common.error'), { variant: 'error' });
+    },
+    onDeleteSuccess: () => {
+      enqueueSnackbar(t('common.deletedSuccessfully'), { variant: 'success' });
+    },
+    onDeleteError: () => {
+      enqueueSnackbar(t('common.error'), { variant: 'error' });
+    },
+  };
+}
+
+/**
+ * Callbacks for UI notifications (optional - decouples UI concerns from data logic)
+ */
+export interface UseEntityListCallbacks {
+  /**
+   * Called when data loads successfully
+   */
+  onLoadSuccess?: () => void;
+  
+  /**
+   * Called when data load fails
+   */
+  onLoadError?: (error: Error) => void;
+  
+  /**
+   * Called when entity update succeeds
+   */
+  onUpdateSuccess?: () => void;
+  
+  /**
+   * Called when entity update fails
+   */
+  onUpdateError?: (error: Error) => void;
+  
+  /**
+   * Called when entity delete succeeds
+   */
+  onDeleteSuccess?: () => void;
+  
+  /**
+   * Called when entity delete fails
+   */
+  onDeleteError?: (error: Error) => void;
+}
 
 /**
  * Configuration for entity list operations
@@ -41,6 +114,11 @@ export interface UseEntityListConfig<TEntity, TFilters = Record<string, any>> {
    * Initial filters
    */
   initialFilters?: TFilters;
+  
+  /**
+   * Optional callbacks for UI notifications (makes hook reusable in non-UI contexts)
+   */
+  callbacks?: UseEntityListCallbacks;
 }
 
 /**
@@ -127,16 +205,23 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
       const data = await config.fetchList();
       if (!isMountedRef.current) return;
       setEntities(data);
+      config.callbacks?.onLoadSuccess?.();
     } catch (error) {
       if (!isMountedRef.current) return;
       logger.error(`Error loading ${config.entityName} list`, error as Error);
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      
+      // Call callback if provided, otherwise show snackbar (backwards compatible)
+      if (config.callbacks?.onLoadError) {
+        config.callbacks.onLoadError(error as Error);
+      } else {
+        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      }
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
       }
     }
-  }, [config.fetchList, config.entityName, enqueueSnackbar, t]);
+  }, [config.fetchList, config.entityName, config.callbacks, enqueueSnackbar, t]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -191,17 +276,29 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
         try {
           await config.toggleBlock!(entity.id, !entity.blocked);
           await refetch();
-          enqueueSnackbar(t('common.updatedSuccessfully'), { variant: 'success' });
+          
+          // Call callback if provided, otherwise show snackbar (backwards compatible)
+          if (config.callbacks?.onUpdateSuccess) {
+            config.callbacks.onUpdateSuccess();
+          } else {
+            enqueueSnackbar(t('common.updatedSuccessfully'), { variant: 'success' });
+          }
           onConfirm();
         } catch (error) {
           logger.error(`Error toggling ${config.entityName} block status`, error as Error, { entityId: entity.id });
-          enqueueSnackbar(t('common.error'), { variant: 'error' });
+          
+          // Call callback if provided, otherwise show snackbar (backwards compatible)
+          if (config.callbacks?.onUpdateError) {
+            config.callbacks.onUpdateError(error as Error);
+          } else {
+            enqueueSnackbar(t('common.error'), { variant: 'error' });
+          }
         }
       };
 
       confirmAction();
     },
-    [config.toggleBlock, config.entityName, refetch, enqueueSnackbar, t]
+    [config.toggleBlock, config.entityName, config.callbacks, refetch, enqueueSnackbar, t]
   );
 
   const handleDelete = useCallback(
@@ -215,17 +312,29 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
         try {
           await config.deleteEntity!(entity.id);
           await refetch();
-          enqueueSnackbar(t('common.deletedSuccessfully'), { variant: 'success' });
+          
+          // Call callback if provided, otherwise show snackbar (backwards compatible)
+          if (config.callbacks?.onDeleteSuccess) {
+            config.callbacks.onDeleteSuccess();
+          } else {
+            enqueueSnackbar(t('common.deletedSuccessfully'), { variant: 'success' });
+          }
           onConfirm();
         } catch (error) {
           logger.error(`Error deleting ${config.entityName}`, error as Error, { entityId: entity.id });
-          enqueueSnackbar(t('common.error'), { variant: 'error' });
+          
+          // Call callback if provided, otherwise show snackbar (backwards compatible)
+          if (config.callbacks?.onDeleteError) {
+            config.callbacks.onDeleteError(error as Error);
+          } else {
+            enqueueSnackbar(t('common.error'), { variant: 'error' });
+          }
         }
       };
 
       confirmAction();
     },
-    [config.deleteEntity, config.entityName, refetch, enqueueSnackbar, t]
+    [config.deleteEntity, config.entityName, config.callbacks, refetch, enqueueSnackbar, t]
   );
 
   return {

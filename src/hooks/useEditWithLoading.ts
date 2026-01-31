@@ -1,8 +1,41 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSnackbar } from 'notistack';
+import { useSnackbar, type VariantType } from 'notistack';
 import { isApiError } from '../api/errors';
 import { logger } from '../utils/logger';
+
+/**
+ * Callbacks for UI notifications (optional - decouples UI concerns from data logic)
+ */
+export interface UseEditWithLoadingCallbacks {
+  /**
+   * Called when loading fails
+   * @param error - The error that occurred
+   */
+  onError?: (error: Error) => void;
+}
+
+/**
+ * Helper to create default error callback using snackbar.
+ * Decouples hook from UI while providing easy opt-in for standard behavior.
+ */
+export function createEditErrorCallback(
+  enqueueSnackbar: (message: string, options?: { variant?: VariantType }) => void,
+  t: (key: string) => string
+): UseEditWithLoadingCallbacks {
+  return {
+    onError: (error: Error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(
+          error.message || t('common.error.loadFailed'),
+          { variant: 'error' }
+        );
+      }
+    },
+  };
+}
 
 /**
  * Configuration for useEditWithLoading hook
@@ -29,6 +62,11 @@ export interface UseEditWithLoadingConfig<T> {
    * Optional function to extract ID from entity for logging
    */
   getEntityId?: (entity: any) => string | number;
+  
+  /**
+   * Optional callbacks for UI notifications (makes hook reusable in non-UI contexts)
+   */
+  callbacks?: UseEditWithLoadingCallbacks;
 }
 
 /**
@@ -90,14 +128,19 @@ export function useEditWithLoading<T = any>(
           [`${config.entityName}Id`]: entityId,
         });
         
-        // Display error with standardized messaging
-        if (isApiError(error)) {
-          enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+        // Call callback if provided, otherwise show snackbar (backwards compatible)
+        if (config.callbacks?.onError) {
+          config.callbacks.onError(error as Error);
         } else {
-          enqueueSnackbar(
-            error instanceof Error ? error.message : t('common.error.loadFailed'),
-            { variant: 'error' }
-          );
+          // Default behavior: show snackbar
+          if (isApiError(error)) {
+            enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+          } else {
+            enqueueSnackbar(
+              error instanceof Error ? error.message : t('common.error.loadFailed'),
+              { variant: 'error' }
+            );
+          }
         }
         
         setIsLoading(false);

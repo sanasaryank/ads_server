@@ -1,12 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSnackbar } from 'notistack';
+import { useSnackbar, type VariantType } from 'notistack';
 import { campaignsApi, advertisersApi, dictionariesApi, restaurantsApi, schedulesApi } from '../api';
 import { logger } from '../utils/logger';
 import { useDictionariesStore } from '../store/dictionariesStore';
 import { useRestaurantsStore } from '../store/restaurantsStore';
 import { useAdvertisersStore } from '../store/advertisersStore';
 import type { Campaign, Advertiser, DictionaryItem, RestaurantListItem, Schedule, Slot, District, City } from '../types';
+
+/**
+ * Callbacks for UI notifications (optional - decouples UI concerns)
+ */
+export interface UseCampaignsDataCallbacks {
+  onLoadError?: (error: Error) => void;
+}
+
+/**
+ * Helper to create default callback using snackbar
+ */
+export function createCampaignsDataCallback(
+  enqueueSnackbar: (message: string, options?: { variant?: VariantType }) => void,
+  t: (key: string) => string
+): UseCampaignsDataCallbacks {
+  return {
+    onLoadError: () => {
+      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+    },
+  };
+}
 
 export interface CampaignsData {
   campaigns: Campaign[];
@@ -21,7 +42,11 @@ export interface CampaignsData {
   priceSegments: DictionaryItem[];
 }
 
-export const useCampaignsData = () => {
+export interface UseCampaignsDataOptions {
+  callbacks?: UseCampaignsDataCallbacks;
+}
+
+export const useCampaignsData = (options?: UseCampaignsDataOptions) => {
   const { t } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
   const isMountedRef = useRef(true);
@@ -78,7 +103,13 @@ export const useCampaignsData = () => {
         entityType: 'campaign',
         operation: 'list'
       });
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      
+      // Call callback if provided, otherwise show snackbar (backwards compatible)
+      if (options?.callbacks?.onLoadError) {
+        options.callbacks.onLoadError(error);
+      } else {
+        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      }
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -149,7 +180,13 @@ export const useCampaignsData = () => {
         entityType: 'campaign',
         operation: 'loadFormData'
       });
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      
+      // Call callback if provided, otherwise show snackbar (backwards compatible)
+      if (options?.callbacks?.onLoadError) {
+        options.callbacks.onLoadError(error);
+      } else {
+        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+      }
     }
   };
 
