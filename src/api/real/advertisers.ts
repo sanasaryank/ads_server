@@ -1,0 +1,110 @@
+/**
+ * Advertisers API
+ * Manages advertiser entities
+ */
+
+import { realApiFetch } from './client';
+import { env } from '../../config/env';
+import type { Advertiser, AdvertiserFormData } from '../../types';
+
+const ADVERTISERS_BASE_URL = `${env.apiBaseUrl}/advertisers`;
+
+// API response type with different field names
+interface ApiAdvertiser {
+  id: string;
+  name: {
+    ARM: string;
+    ENG: string;
+    RUS: string;
+  };
+  TIN: string;
+  isBlocked: boolean;
+  description?: string;
+  hash?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+// Transform API response to internal format
+const transformFromApi = (apiAdvertiser: ApiAdvertiser): Advertiser & { hash?: string } => ({
+  id: apiAdvertiser.id,
+  name: apiAdvertiser.name,
+  tin: apiAdvertiser.TIN,
+  blocked: apiAdvertiser.isBlocked,
+  description: apiAdvertiser.description,
+  createdAt: apiAdvertiser.createdAt || 0,
+  updatedAt: apiAdvertiser.updatedAt || 0,
+  hash: apiAdvertiser.hash,
+});
+
+// Transform internal format to API request
+const transformToApi = (data: AdvertiserFormData) => ({
+  name: data.name,
+  TIN: data.tin,
+  isBlocked: data.blocked,
+  description: data.description,
+});
+
+export const realAdvertisersApi = {
+  /**
+   * Get all advertisers
+   */
+  list: async (): Promise<Advertiser[]> => {
+    const response = await realApiFetch(`${ADVERTISERS_BASE_URL}`, {
+      method: 'GET',
+    });
+    const apiAdvertisers = await response.json() as ApiAdvertiser[];
+    return apiAdvertisers.map(transformFromApi);
+  },
+
+  /**
+   * Get single advertiser by ID (with hash for editing)
+   */
+  getById: async (id: string): Promise<Advertiser & { hash?: string }> => {
+    const response = await realApiFetch(`${ADVERTISERS_BASE_URL}/${id}`, {
+      method: 'GET',
+    });
+    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    return transformFromApi(apiAdvertiser);
+  },
+
+  /**
+   * Create new advertiser
+   */
+  create: async (data: AdvertiserFormData): Promise<Advertiser> => {
+    const payload = transformToApi(data);
+    const response = await realApiFetch(`${ADVERTISERS_BASE_URL}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    return transformFromApi(apiAdvertiser);
+  },
+
+  /**
+   * Update existing advertiser
+   */
+  update: async (id: string, data: AdvertiserFormData & { hash: string }): Promise<Advertiser> => {
+    const payload = {
+      id,
+      ...transformToApi(data),
+      hash: data.hash,
+    };
+    const response = await realApiFetch(`${ADVERTISERS_BASE_URL}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    return transformFromApi(apiAdvertiser);
+  },
+
+  /**
+   * Block/unblock advertiser
+   */
+  block: async (id: string, blocked: boolean): Promise<void> => {
+    await realApiFetch(`${ADVERTISERS_BASE_URL}/${id}/block`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isBlocked: blocked }),
+    });
+  },
+};
