@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useMemo, useCallback, type ReactNode } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/logger';
@@ -80,44 +80,6 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-const getMenuItems = (): MenuItem[] => [
-  {
-    id: 'restaurants',
-    labelKey: 'menu.restaurants',
-    icon: <RestaurantIcon />,
-    path: '/restaurants',
-  },
-  {
-    id: 'dictionaries',
-    labelKey: 'menu.dictionaries',
-    icon: <BookIcon />,
-    children: [
-      { id: 'slots', labelKey: 'menu.slots', icon: null, path: '/slots' },
-      { id: 'schedules', labelKey: 'menu.schedules', icon: null, path: '/schedules' },
-    ],
-  },
-  {
-    id: 'advertisement',
-    labelKey: 'menu.advertisement',
-    icon: <CampaignIcon />,
-    children: [
-      { id: 'advertisers', labelKey: 'menu.advertisers', icon: null, path: '/advertisers' },
-      { id: 'campaigns', labelKey: 'menu.campaigns', icon: null, path: '/campaigns' },
-      { id: 'creatives', labelKey: 'menu.creatives', icon: null, path: '/creatives' },
-    ],
-  },
-  {
-    id: 'statistics',
-    labelKey: 'menu.statistics',
-    icon: <BarChartIcon />,
-    children: [
-      { id: 'staff-actions', labelKey: 'menu.staffActions', icon: null, path: '/statistics/staff-actions' },
-      { id: 'usage', labelKey: 'menu.usage', icon: null, path: '/statistics/usage' },
-      { id: 'error-log', labelKey: 'menu.errorLog', icon: null, path: '/statistics/error-log' },
-    ],
-  },
-];
-
 export const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,13 +88,50 @@ export const MainLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
-  const menuItems = getMenuItems();
+  // Memoize menu items to prevent recreation on every render
+  const menuItems = useMemo<MenuItem[]>(() => [
+    {
+      id: 'restaurants',
+      labelKey: 'menu.restaurants',
+      icon: <RestaurantIcon />,
+      path: '/restaurants',
+    },
+    {
+      id: 'dictionaries',
+      labelKey: 'menu.dictionaries',
+      icon: <BookIcon />,
+      children: [
+        { id: 'slots', labelKey: 'menu.slots', icon: null, path: '/slots' },
+        { id: 'schedules', labelKey: 'menu.schedules', icon: null, path: '/schedules' },
+      ],
+    },
+    {
+      id: 'advertisement',
+      labelKey: 'menu.advertisement',
+      icon: <CampaignIcon />,
+      children: [
+        { id: 'advertisers', labelKey: 'menu.advertisers', icon: null, path: '/advertisers' },
+        { id: 'campaigns', labelKey: 'menu.campaigns', icon: null, path: '/campaigns' },
+        { id: 'creatives', labelKey: 'menu.creatives', icon: null, path: '/creatives' },
+      ],
+    },
+    {
+      id: 'statistics',
+      labelKey: 'menu.statistics',
+      icon: <BarChartIcon />,
+      children: [
+        { id: 'staff-actions', labelKey: 'menu.staffActions', icon: null, path: '/statistics/staff-actions' },
+        { id: 'usage', labelKey: 'menu.usage', icon: null, path: '/statistics/usage' },
+        { id: 'error-log', labelKey: 'menu.errorLog', icon: null, path: '/statistics/error-log' },
+      ],
+    },
+  ], []);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const handleDrawerToggle = useCallback(() => {
+    setMobileOpen((prev) => !prev);
+  }, []);
 
-  const handleItemClick = (item: MenuItem) => {
+  const handleItemClick = useCallback((item: MenuItem) => {
     if (item.children) {
       setExpandedItems((prev) => ({
         ...prev,
@@ -142,18 +141,18 @@ export const MainLayout = () => {
       navigate(item.path);
       setMobileOpen(false);
     }
-  };
+  }, [navigate]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       navigate('/login');
     } catch (error) {
       logger.error('Logout failed', error as Error);
     }
-  };
+  }, [logout, navigate]);
 
-  const renderMenuItem = (item: MenuItem, depth = 0) => {
+  const renderMenuItem = useCallback((item: MenuItem, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
     const isActive = item.path && location.pathname.startsWith(item.path);
@@ -194,7 +193,7 @@ export const MainLayout = () => {
         )}
       </Box>
     );
-  };
+  }, [expandedItems, location.pathname, t, handleItemClick]);
 
   const drawer = (
     <Box>

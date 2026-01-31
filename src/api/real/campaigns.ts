@@ -4,14 +4,17 @@
  */
 
 import { realApiFetch } from './client';
+import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { Campaign, CampaignFormData, ApiCampaign } from '../../types';
 
 const CAMPAIGNS_BASE_URL = `${env.apiBaseUrl}${API_ENDPOINTS.campaigns}`;
 
-// Transform API response to internal format
-const transformFromApi = (apiCampaign: ApiCampaign): Campaign & { hash?: string } => ({
+// Create transformer for campaign data
+const campaignTransformer = createApiTransformer<ApiCampaign, Campaign & { hash?: string }>(
+  // Transform API response to internal format
+  (apiCampaign) => ({
   id: apiCampaign.id,
   advertiserId: apiCampaign.advertiserId,
   name: apiCampaign.name,
@@ -55,9 +58,41 @@ const transformFromApi = (apiCampaign: ApiCampaign): Campaign & { hash?: string 
   createdAt: apiCampaign.createdAt || 0,
   updatedAt: apiCampaign.updatedAt || 0,
   hash: apiCampaign.hash,
-});
+}),
+  // Transform internal format to API request (not used directly, see transformToApi below)
+  (campaign) => ({
+    id: String(campaign.id),
+    advertiserId: campaign.advertiserId,
+    name: campaign.name,
+    description: campaign.description,
+    startDate: campaign.startDate,
+    endDate: campaign.endDate,
+    budget: campaign.budget,
+    budgetDaily: campaign.budgetDaily,
+    price: campaign.price,
+    pricingModel: campaign.pricingModel,
+    spendStrategy: campaign.spendStrategy,
+    frequencyCapStrategy: campaign.frequencyCapStrategy,
+    frequencyCap: campaign.frequencyCap,
+    priority: campaign.priority,
+    weight: campaign.weight,
+    overdeliveryRatio: campaign.overdeliveryRatio,
+    locationsMode: campaign.locationsMode,
+    locations: campaign.locations,
+    restaurantTypesMode: campaign.restaurantTypesMode,
+    restaurantTypes: campaign.restaurantTypes,
+    menuTypesMode: campaign.menuTypesMode,
+    menuTypes: campaign.menuTypes,
+    slots: campaign.slots,
+    targets: campaign.targets,
+    isBlocked: campaign.blocked,
+    createdAt: campaign.createdAt,
+    updatedAt: campaign.updatedAt,
+    hash: campaign.hash,
+  })
+);
 
-// Transform internal format to API request
+// Transform form data to API request
 const transformToApi = (data: CampaignFormData) => ({
   advertiserId: data.advertiserId,
   name: data.name,
@@ -94,7 +129,7 @@ export const realCampaignsApi = {
       method: 'GET',
     });
     const apiCampaigns = await response.json() as ApiCampaign[];
-    return apiCampaigns.map(transformFromApi);
+    return campaignTransformer.fromApiList(apiCampaigns);
   },
 
   /**
@@ -105,7 +140,7 @@ export const realCampaignsApi = {
       method: 'GET',
     });
     const apiCampaign = await response.json() as ApiCampaign;
-    return transformFromApi(apiCampaign);
+    return campaignTransformer.fromApi(apiCampaign);
   },
 
   /**
@@ -118,7 +153,7 @@ export const realCampaignsApi = {
       body: JSON.stringify(payload),
     });
     const apiCampaign = await response.json() as ApiCampaign;
-    return transformFromApi(apiCampaign);
+    return campaignTransformer.fromApi(apiCampaign);
   },
 
   /**
@@ -135,7 +170,7 @@ export const realCampaignsApi = {
       body: JSON.stringify(payload),
     });
     const apiCampaign = await response.json() as ApiCampaign;
-    return transformFromApi(apiCampaign);
+    return campaignTransformer.fromApi(apiCampaign);
   },
 
   /**

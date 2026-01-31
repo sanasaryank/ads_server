@@ -44,3 +44,6 @@ export type { ConfirmDialogProps } from './ConfirmDialog';
 export { default as MultilingualNameField } from './MultilingualNameField';
 export { default as SwitchField } from './SwitchField';
 export { default as TimeSelectField } from './TimeSelectField';
+
+export { GenericFormDialog } from './GenericFormDialog';
+export type { GenericFormDialogProps, FormFieldConfig, FormTab } from './GenericFormDialog';

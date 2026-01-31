@@ -4,46 +4,63 @@
  */
 
 import { realApiFetch } from './client';
+import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { Schedule, ScheduleFormData, DaySchedule, ApiSchedule, ApiDaySchedule } from '../../types';
 
 const SCHEDULES_BASE_URL = `${env.apiBaseUrl}${API_ENDPOINTS.schedules}`;
 
-// Transform API day schedule to internal format
-const transformDayScheduleFromApi = (apiDay: ApiDaySchedule): DaySchedule => ({
-  day: apiDay.day as DaySchedule['day'],
-  enabled: apiDay.enabled,
-  startTime: apiDay.start,
-  endTime: apiDay.end,
-});
+// Create transformer for day schedule data
+const dayScheduleTransformer = createApiTransformer<ApiDaySchedule, DaySchedule>(
+  // Transform API day schedule to internal format
+  (apiDay) => ({
+    day: apiDay.day as DaySchedule['day'],
+    enabled: apiDay.enabled,
+    startTime: apiDay.start,
+    endTime: apiDay.end,
+  }),
+  // Transform internal day schedule to API format
+  (day) => ({
+    day: day.day,
+    enabled: day.enabled,
+    start: day.startTime,
+    end: day.endTime,
+  })
+);
 
-// Transform internal day schedule to API format
-const transformDayScheduleToApi = (day: DaySchedule): ApiDaySchedule => ({
-  day: day.day,
-  enabled: day.enabled,
-  start: day.startTime,
-  end: day.endTime,
-});
+// Create transformer for schedule data
+const scheduleTransformer = createApiTransformer<ApiSchedule, Schedule & { hash?: string }>(
+  // Transform API response to internal format
+  (apiSchedule) => ({
+    id: apiSchedule.id,
+    name: apiSchedule.name,
+    color: apiSchedule.color,
+    blocked: apiSchedule.isBlocked,
+    weekSchedule: dayScheduleTransformer.fromApiList(apiSchedule.weekSchedule),
+    createdAt: apiSchedule.createdAt || 0,
+    updatedAt: apiSchedule.updatedAt || 0,
+    hash: apiSchedule.hash,
+  }),
+  // Transform internal format to API request (not used directly, see transformToApi below)
+  (schedule) => ({
+    id: schedule.id,
+    name: schedule.name,
+    color: schedule.color,
+    isBlocked: schedule.blocked,
+    weekSchedule: dayScheduleTransformer.toApiList(schedule.weekSchedule),
+    createdAt: schedule.createdAt,
+    updatedAt: schedule.updatedAt,
+    hash: schedule.hash,
+  })
+);
 
-// Transform API response to internal format
-const transformFromApi = (apiSchedule: ApiSchedule): Schedule & { hash?: string } => ({
-  id: apiSchedule.id,
-  name: apiSchedule.name,
-  color: apiSchedule.color,
-  blocked: apiSchedule.isBlocked,
-  weekSchedule: apiSchedule.weekSchedule.map(transformDayScheduleFromApi),
-  createdAt: apiSchedule.createdAt || 0,
-  updatedAt: apiSchedule.updatedAt || 0,
-  hash: apiSchedule.hash,
-});
-
-// Transform internal format to API request
+// Transform form data to API request
 const transformToApi = (data: ScheduleFormData) => ({
   name: data.name,
   color: data.color,
   isBlocked: data.blocked,
-  weekSchedule: data.weekSchedule.map(transformDayScheduleToApi),
+  weekSchedule: dayScheduleTransformer.toApiList(data.weekSchedule),
 });
 
 export const realSchedulesApi = {
@@ -56,7 +73,7 @@ export const realSchedulesApi = {
     });
     
     const apiSchedules = await response.json() as ApiSchedule[];
-    return apiSchedules.map(transformFromApi);
+    return scheduleTransformer.fromApiList(apiSchedules);
   },
 
   /**
@@ -68,7 +85,7 @@ export const realSchedulesApi = {
     });
     
     const apiSchedule = await response.json() as ApiSchedule;
-    return transformFromApi(apiSchedule);
+    return scheduleTransformer.fromApi(apiSchedule);
   },
 
   /**
@@ -81,7 +98,7 @@ export const realSchedulesApi = {
     });
     
     const apiSchedule = await response.json() as ApiSchedule;
-    return transformFromApi(apiSchedule);
+    return scheduleTransformer.fromApi(apiSchedule);
   },
 
   /**
@@ -99,7 +116,7 @@ export const realSchedulesApi = {
     });
     
     const apiSchedule = await response.json() as ApiSchedule;
-    return transformFromApi(apiSchedule);
+    return scheduleTransformer.fromApi(apiSchedule);
   },
 
   /**
@@ -121,6 +138,6 @@ export const realSchedulesApi = {
     });
     
     const apiSchedule = await response.json() as ApiSchedule;
-    return transformFromApi(apiSchedule);
+    return scheduleTransformer.fromApi(apiSchedule);
   },
 };

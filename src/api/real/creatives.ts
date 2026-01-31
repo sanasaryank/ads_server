@@ -1,13 +1,15 @@
 import { realApiFetch } from './client';
+import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { Creative, CreativeFormData, ApiCreative, ApiCreativeRequest } from '../../types';
 
 const CREATIVES_BASE_URL = `${env.apiBaseUrl}${API_ENDPOINTS.creatives}`;
 
-// Transform API response to internal type
-const transformFromApi = (apiCreative: ApiCreative): Creative => {
-  return {
+// Create transformer for creative data
+const creativeTransformer = createApiTransformer<ApiCreative, Creative>(
+  // Transform API response to internal type
+  (apiCreative) => ({
     id: apiCreative.id,
     campaignId: apiCreative.campaignId,
     name: apiCreative.name,
@@ -20,10 +22,25 @@ const transformFromApi = (apiCreative: ApiCreative): Creative => {
     previewHeight: apiCreative.previewHeight,
     blocked: apiCreative.isBlocked,
     hash: apiCreative.hash,
-  };
-};
+  }),
+  // Transform internal type to API request (not used directly, see transformToApi below)
+  (creative) => ({
+    id: creative.id,
+    campaignId: creative.campaignId,
+    name: creative.name,
+    dataUrl: creative.dataUrl,
+    minHeight: creative.minHeight,
+    maxHeight: creative.maxHeight,
+    minWidth: creative.minWidth,
+    maxWidth: creative.maxWidth,
+    previewWidth: creative.previewWidth,
+    previewHeight: creative.previewHeight,
+    isBlocked: creative.blocked,
+    hash: creative.hash,
+  })
+);
 
-// Transform internal type to API request
+// Transform form data to API request
 const transformToApi = (formData: CreativeFormData): ApiCreativeRequest => {
   return {
     id: formData.id,
@@ -47,7 +64,7 @@ export const realCreativesApi = {
       method: 'GET',
     });
     const apiCreatives = await response.json() as ApiCreative[];
-    return apiCreatives.map(transformFromApi);
+    return creativeTransformer.fromApiList(apiCreatives);
   },
 
   getById: async (id: string): Promise<Creative> => {
@@ -55,7 +72,7 @@ export const realCreativesApi = {
       method: 'GET',
     });
     const apiCreative = await response.json() as ApiCreative;
-    return transformFromApi(apiCreative);
+    return creativeTransformer.fromApi(apiCreative);
   },
 
   create: async (data: CreativeFormData): Promise<Creative> => {
@@ -65,7 +82,7 @@ export const realCreativesApi = {
       body: JSON.stringify(requestData),
     });
     const apiCreative = await response.json() as ApiCreative;
-    return transformFromApi(apiCreative);
+    return creativeTransformer.fromApi(apiCreative);
   },
 
   update: async (id: string, data: CreativeFormData): Promise<Creative> => {
@@ -75,7 +92,7 @@ export const realCreativesApi = {
       body: JSON.stringify(requestData),
     });
     const apiCreative = await response.json() as ApiCreative;
-    return transformFromApi(apiCreative);
+    return creativeTransformer.fromApi(apiCreative);
   },
 
   block: async (id: string, blocked: boolean): Promise<Creative> => {
@@ -84,6 +101,6 @@ export const realCreativesApi = {
       body: JSON.stringify({ isBlocked: blocked }),
     });
     const apiCreative = await response.json() as ApiCreative;
-    return transformFromApi(apiCreative);
+    return creativeTransformer.fromApi(apiCreative);
   },
 };

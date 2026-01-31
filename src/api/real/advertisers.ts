@@ -4,25 +4,40 @@
  */
 
 import { realApiFetch } from './client';
+import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { Advertiser, AdvertiserFormData, ApiAdvertiser } from '../../types';
 
 const ADVERTISERS_BASE_URL = `${env.apiBaseUrl}${API_ENDPOINTS.advertisers}`;
 
-// Transform API response to internal format
-const transformFromApi = (apiAdvertiser: ApiAdvertiser): Advertiser & { hash?: string } => ({
-  id: apiAdvertiser.id,
-  name: apiAdvertiser.name,
-  tin: apiAdvertiser.TIN,
-  blocked: apiAdvertiser.isBlocked,
-  description: apiAdvertiser.description,
-  createdAt: apiAdvertiser.createdAt || 0,
-  updatedAt: apiAdvertiser.updatedAt || 0,
-  hash: apiAdvertiser.hash,
-});
+// Create transformer for advertiser data
+const advertiserTransformer = createApiTransformer<ApiAdvertiser, Advertiser & { hash?: string }>(
+  // Transform API response to internal format
+  (apiAdvertiser) => ({
+    id: apiAdvertiser.id,
+    name: apiAdvertiser.name,
+    tin: apiAdvertiser.TIN,
+    blocked: apiAdvertiser.isBlocked,
+    description: apiAdvertiser.description,
+    createdAt: apiAdvertiser.createdAt || 0,
+    updatedAt: apiAdvertiser.updatedAt || 0,
+    hash: apiAdvertiser.hash,
+  }),
+  // Transform internal format to API request (not used directly, see transformToApi below)
+  (advertiser) => ({
+    id: advertiser.id,
+    name: advertiser.name,
+    TIN: advertiser.tin,
+    isBlocked: advertiser.blocked,
+    description: advertiser.description,
+    createdAt: advertiser.createdAt,
+    updatedAt: advertiser.updatedAt,
+    hash: advertiser.hash,
+  })
+);
 
-// Transform internal format to API request
+// Transform form data to API request
 const transformToApi = (data: AdvertiserFormData) => ({
   name: data.name,
   TIN: data.tin,
@@ -39,7 +54,7 @@ export const realAdvertisersApi = {
       method: 'GET',
     });
     const apiAdvertisers = await response.json() as ApiAdvertiser[];
-    return apiAdvertisers.map(transformFromApi);
+    return advertiserTransformer.fromApiList(apiAdvertisers);
   },
 
   /**
@@ -50,7 +65,7 @@ export const realAdvertisersApi = {
       method: 'GET',
     });
     const apiAdvertiser = await response.json() as ApiAdvertiser;
-    return transformFromApi(apiAdvertiser);
+    return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
   /**
@@ -63,7 +78,7 @@ export const realAdvertisersApi = {
       body: JSON.stringify(payload),
     });
     const apiAdvertiser = await response.json() as ApiAdvertiser;
-    return transformFromApi(apiAdvertiser);
+    return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
   /**
@@ -80,7 +95,7 @@ export const realAdvertisersApi = {
       body: JSON.stringify(payload),
     });
     const apiAdvertiser = await response.json() as ApiAdvertiser;
-    return transformFromApi(apiAdvertiser);
+    return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
   /**
