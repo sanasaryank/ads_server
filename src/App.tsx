@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, Box, CircularProgress } from '@mui/material';
 import { SnackbarProvider } from 'notistack';
 import { theme } from './theme';
@@ -49,6 +49,7 @@ const LoadingFallback = () => (
  */
 function AppRouter() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Register navigate function with navigation service on mount
   useEffect(() => {
@@ -69,41 +70,41 @@ function AppRouter() {
         >
                   <Route index element={<Navigate to="/restaurants" replace />} />
                   
-                  {/* Restaurants */}
+                  {/* Restaurants - reset on route change */}
                   <Route
                     path="restaurants"
                     element={
-                      <ErrorBoundary fallback={<RestaurantsErrorFallback />}>
+                      <ErrorBoundary fallback={<RestaurantsErrorFallback />} resetKeys={[location.pathname]}>
                         <RestaurantsListPage />
                       </ErrorBoundary>
                     }
                   />
 
-                  {/* Dictionaries */}
+                  {/* Dictionaries - reset on route change */}
                   <Route
                     path="dictionaries/:dictKey"
                     element={
-                      <ErrorBoundary fallback={<DictionariesErrorFallback />}>
+                      <ErrorBoundary fallback={<DictionariesErrorFallback />} resetKeys={[location.pathname]}>
                         <DictionariesPage />
                       </ErrorBoundary>
                     }
                   />
 
-                  {/* Slots */}
+                  {/* Slots - reset on route change */}
                   <Route
                     path="slots"
                     element={
-                      <ErrorBoundary fallback={<DictionariesErrorFallback />}>
+                      <ErrorBoundary fallback={<DictionariesErrorFallback />} resetKeys={[location.pathname]}>
                         <SlotsListPage />
                       </ErrorBoundary>
                     }
                   />
 
-                  {/* Advertisement */}
+                  {/* Advertisement - reset on route change */}
                   <Route
                     path="advertisers"
                     element={
-                      <ErrorBoundary fallback={<AdvertisementErrorFallback />}>
+                      <ErrorBoundary fallback={<AdvertisementErrorFallback />} resetKeys={[location.pathname]}>
                         <AdvertisersListPage />
                       </ErrorBoundary>
                     }
@@ -111,7 +112,7 @@ function AppRouter() {
                   <Route
                     path="campaigns"
                     element={
-                      <ErrorBoundary fallback={<AdvertisementErrorFallback />}>
+                      <ErrorBoundary fallback={<AdvertisementErrorFallback />} resetKeys={[location.pathname]}>
                         <CampaignsListPage />
                       </ErrorBoundary>
                     }
@@ -119,7 +120,7 @@ function AppRouter() {
                   <Route
                     path="creatives"
                     element={
-                      <ErrorBoundary fallback={<AdvertisementErrorFallback />}>
+                      <ErrorBoundary fallback={<AdvertisementErrorFallback />} resetKeys={[location.pathname]}>
                         <CreativesListPage />
                       </ErrorBoundary>
                     }
@@ -127,17 +128,17 @@ function AppRouter() {
                   <Route
                     path="schedules"
                     element={
-                      <ErrorBoundary fallback={<AdvertisementErrorFallback />}>
+                      <ErrorBoundary fallback={<AdvertisementErrorFallback />} resetKeys={[location.pathname]}>
                         <SchedulesListPage />
                       </ErrorBoundary>
                     }
                   />
 
-                  {/* Statistics */}
+                  {/* Statistics - reset on route change */}
                   <Route
                     path="statistics/:section"
                     element={
-                      <ErrorBoundary fallback={<StatisticsErrorFallback />}>
+                      <ErrorBoundary fallback={<StatisticsErrorFallback />} resetKeys={[location.pathname]}>
                         <StatisticsPage />
                       </ErrorBoundary>
                     }
