@@ -153,10 +153,10 @@ export const SlotFormDialog = memo(({
 
         if (isEditMode) {
           await slotsApi.update(slotId!, formData as SlotFormData);
-          enqueueSnackbar(t('common.savedSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.saved'), { variant: 'success' });
         } else {
           await slotsApi.create(formData as Omit<SlotFormData, 'id' | 'hash'>);
-          enqueueSnackbar(t('common.createdSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.created'), { variant: 'success' });
         }
 
         onSave();

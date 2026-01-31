@@ -4,7 +4,7 @@
  */
 
 import { Controller, type Control } from 'react-hook-form';
-import { useTheme } from '@mui/material';
+import { useTheme, Box } from '@mui/material';
 
 interface TimeSelectFieldProps {
   /** Control from react-hook-form */
@@ -49,10 +49,11 @@ export const TimeSelectField = ({
       name={name}
       control={control}
       render={({ field }) => (
-        <select
+        <Box
+          component="select"
           {...field}
           disabled={disabled}
-          style={{
+          sx={{
             width: '100%',
             padding: '8px',
             borderRadius: '4px',
@@ -67,7 +68,7 @@ export const TimeSelectField = ({
               {time}
             </option>
           ))}
-        </select>
+        </Box>
       )}
     />
   );

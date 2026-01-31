@@ -215,7 +215,7 @@ function DataTable<T extends Record<string, any>>({
         {columns.map((column) => (
           <TableCell
             key={String(column.id)}
-            style={{ width: column.width }}
+            sx={{ width: column.width }}
           >
             <CellErrorBoundary>
               {column.render
@@ -240,7 +240,7 @@ function DataTable<T extends Record<string, any>>({
           <TableRow>
             <TableCell
               colSpan={columns.length}
-              style={{ height: virtualItems[0].start, padding: 0, border: 0 }}
+              sx={{ height: virtualItems[0].start, padding: 0, border: 0 }}
             />
           </TableRow>
         )}
@@ -262,7 +262,7 @@ function DataTable<T extends Record<string, any>>({
               {columns.map((column) => (
                 <TableCell
                   key={String(column.id)}
-                  style={{ width: column.width }}
+                  sx={{ width: column.width }}
                 >
                   <CellErrorBoundary>
                     {column.render
@@ -280,7 +280,7 @@ function DataTable<T extends Record<string, any>>({
           <TableRow>
             <TableCell
               colSpan={columns.length}
-              style={{
+              sx={{
                 height: rowVirtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]?.end ?? 0),
                 padding: 0,
                 border: 0,
@@ -304,7 +304,7 @@ function DataTable<T extends Record<string, any>>({
             {columns.map((column) => (
               <TableCell
                 key={String(column.id)}
-                style={{ width: column.width }}
+                sx={{ width: column.width }}
               >
                 {column.sortable && onSort ? (
                   <TableSortLabel

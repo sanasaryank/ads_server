@@ -209,11 +209,11 @@ export const DictionaryFormDialog = ({
         if (isEditMode) {
           // TODO: Implement dictionariesApi.update
           // await dictionariesApi.update(dictKey, itemId, formData as unknown as DictionaryFormData);
-          enqueueSnackbar(t('common.savedSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.saved'), { variant: 'success' });
         } else {
           // TODO: Implement dictionariesApi.create
           // await dictionariesApi.create(dictKey, formData as unknown as DictionaryFormData);
-          enqueueSnackbar(t('common.createdSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.created'), { variant: 'success' });
         }
 
         onSave();
