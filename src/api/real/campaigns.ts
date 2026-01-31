@@ -3,7 +3,7 @@
  * Manages campaign entities
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
@@ -128,8 +128,8 @@ export const realCampaignsApi = {
     const response = await realApiFetch(`${CAMPAIGNS_BASE_URL}`, {
       method: 'GET',
     });
-    const apiCampaigns = await response.json() as ApiCampaign[];
-    return campaignTransformer.fromApiList(apiCampaigns);
+    const apiCampaigns = await parseJsonResponse<ApiCampaign[]>(response);
+    return campaignTransformer.fromApiList(apiCampaigns || []);
   },
 
   /**
@@ -139,7 +139,8 @@ export const realCampaignsApi = {
     const response = await realApiFetch(`${CAMPAIGNS_BASE_URL}/${id}`, {
       method: 'GET',
     });
-    const apiCampaign = await response.json() as ApiCampaign;
+    const apiCampaign = await parseJsonResponse<ApiCampaign>(response);
+    if (!apiCampaign) throw new Error('Empty response for campaign');
     return campaignTransformer.fromApi(apiCampaign);
   },
 
@@ -152,7 +153,8 @@ export const realCampaignsApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    const apiCampaign = await response.json() as ApiCampaign;
+    const apiCampaign = await parseJsonResponse<ApiCampaign>(response);
+    if (!apiCampaign) throw new Error('Empty response from campaign creation');
     return campaignTransformer.fromApi(apiCampaign);
   },
 
@@ -169,7 +171,8 @@ export const realCampaignsApi = {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
-    const apiCampaign = await response.json() as ApiCampaign;
+    const apiCampaign = await parseJsonResponse<ApiCampaign>(response);
+    if (!apiCampaign) throw new Error('Empty response from campaign update');
     return campaignTransformer.fromApi(apiCampaign);
   },
 

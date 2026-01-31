@@ -1,5 +1,5 @@
 import type { LoginRequest, LoginResponse, User } from '../../types';
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { parseApiError } from '../errors';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
@@ -56,7 +56,8 @@ export const realAuthApi = {
           throw apiError;
         }
 
-        const data: LoginResponse = await response.json();
+        const data = await parseJsonResponse<LoginResponse>(response);
+        if (!data) throw new Error('Empty response from login');
         // No need to store anything - cookie is managed by browser
         return data;
 
@@ -97,7 +98,8 @@ export const realAuthApi = {
       method: 'GET',
     });
 
-    const data: User = await response.json();
+    const data = await parseJsonResponse<User>(response);
+    if (!data) throw new Error('Empty response from /me');
     return data;
   },
 

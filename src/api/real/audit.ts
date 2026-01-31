@@ -3,7 +3,7 @@
  * Manages audit log events
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { AuditEvent, AuditEntityType } from '../../types';
@@ -36,6 +36,6 @@ export const realAuditApi = {
       method: 'GET',
     });
 
-    return response.json();
+    return parseJsonResponse<AuditEvent[]>(response).then(data => data || []);
   },
 };

@@ -3,7 +3,7 @@
  * Manages schedule entities
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
@@ -72,8 +72,8 @@ export const realSchedulesApi = {
       method: 'GET',
     });
     
-    const apiSchedules = await response.json() as ApiSchedule[];
-    return scheduleTransformer.fromApiList(apiSchedules);
+    const apiSchedules = await parseJsonResponse<ApiSchedule[]>(response);
+    return scheduleTransformer.fromApiList(apiSchedules || []);
   },
 
   /**
@@ -84,7 +84,8 @@ export const realSchedulesApi = {
       method: 'GET',
     });
     
-    const apiSchedule = await response.json() as ApiSchedule;
+    const apiSchedule = await parseJsonResponse<ApiSchedule>(response);
+    if (!apiSchedule) throw new Error('Empty response for schedule');
     return scheduleTransformer.fromApi(apiSchedule);
   },
 
@@ -97,7 +98,8 @@ export const realSchedulesApi = {
       body: JSON.stringify(transformToApi(data)),
     });
     
-    const apiSchedule = await response.json() as ApiSchedule;
+    const apiSchedule = await parseJsonResponse<ApiSchedule>(response);
+    if (!apiSchedule) throw new Error('Empty response from schedule creation');
     return scheduleTransformer.fromApi(apiSchedule);
   },
 
@@ -115,7 +117,8 @@ export const realSchedulesApi = {
       body: JSON.stringify(body),
     });
     
-    const apiSchedule = await response.json() as ApiSchedule;
+    const apiSchedule = await parseJsonResponse<ApiSchedule>(response);
+    if (!apiSchedule) throw new Error('Empty response from schedule update');
     return scheduleTransformer.fromApi(apiSchedule);
   },
 
@@ -137,7 +140,8 @@ export const realSchedulesApi = {
       body: JSON.stringify({ isBlocked }),
     });
     
-    const apiSchedule = await response.json() as ApiSchedule;
+    const apiSchedule = await parseJsonResponse<ApiSchedule>(response);
+    if (!apiSchedule) throw new Error('Empty response from schedule block');
     return scheduleTransformer.fromApi(apiSchedule);
   },
 };

@@ -1,4 +1,4 @@
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
@@ -63,15 +63,16 @@ export const realCreativesApi = {
     const response = await realApiFetch(`${CREATIVES_BASE_URL}`, {
       method: 'GET',
     });
-    const apiCreatives = await response.json() as ApiCreative[];
-    return creativeTransformer.fromApiList(apiCreatives);
+    const apiCreatives = await parseJsonResponse<ApiCreative[]>(response);
+    return creativeTransformer.fromApiList(apiCreatives || []);
   },
 
   getById: async (id: string): Promise<Creative> => {
     const response = await realApiFetch(`${CREATIVES_BASE_URL}/${id}`, {
       method: 'GET',
     });
-    const apiCreative = await response.json() as ApiCreative;
+    const apiCreative = await parseJsonResponse<ApiCreative>(response);
+    if (!apiCreative) throw new Error('Empty response for creative');
     return creativeTransformer.fromApi(apiCreative);
   },
 
@@ -81,7 +82,8 @@ export const realCreativesApi = {
       method: 'POST',
       body: JSON.stringify(requestData),
     });
-    const apiCreative = await response.json() as ApiCreative;
+    const apiCreative = await parseJsonResponse<ApiCreative>(response);
+    if (!apiCreative) throw new Error('Empty response from creative creation');
     return creativeTransformer.fromApi(apiCreative);
   },
 
@@ -91,7 +93,8 @@ export const realCreativesApi = {
       method: 'PUT',
       body: JSON.stringify(requestData),
     });
-    const apiCreative = await response.json() as ApiCreative;
+    const apiCreative = await parseJsonResponse<ApiCreative>(response);
+    if (!apiCreative) throw new Error('Empty response from creative update');
     return creativeTransformer.fromApi(apiCreative);
   },
 
@@ -100,7 +103,8 @@ export const realCreativesApi = {
       method: 'PATCH',
       body: JSON.stringify({ isBlocked: blocked }),
     });
-    const apiCreative = await response.json() as ApiCreative;
+    const apiCreative = await parseJsonResponse<ApiCreative>(response);
+    if (!apiCreative) throw new Error('Empty response from creative block');
     return creativeTransformer.fromApi(apiCreative);
   },
 };

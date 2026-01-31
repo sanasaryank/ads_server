@@ -342,3 +342,56 @@ export const realApiFetch = async (
  */
 export const getCircuitBreakerState = () => circuitBreaker.getState();
 export const resetCircuitBreaker = () => circuitBreaker.reset();
+
+/**
+ * Safely parse JSON from response, handling empty responses and non-JSON content.
+ * 
+ * @param response - The fetch Response object
+ * @returns Parsed JSON data or null for empty responses
+ * @throws ApiError if response is not JSON or parsing fails
+ */
+export const parseJsonResponse = async <T>(response: Response): Promise<T | null> => {
+  // Handle 204 No Content and 205 Reset Content
+  if (response.status === 204 || response.status === 205) {
+    return null;
+  }
+
+  // Check content-type header
+  const contentType = response.headers.get('content-type');
+  
+  if (!contentType || !contentType.includes('application/json')) {
+    logger.warn('Non-JSON response received', {
+      url: response.url,
+      status: response.status,
+      contentType,
+    });
+    
+    // For successful requests with non-JSON content, return null
+    if (response.ok) {
+      return null;
+    }
+    
+    // For error responses, throw ApiError
+    throw new ApiError(
+      response.status,
+      0,
+      `Expected JSON response but received ${contentType || 'unknown content type'}`
+    );
+  }
+
+  try {
+    const data = await response.json();
+    return data as T;
+  } catch (error) {
+    logger.error('Failed to parse JSON response', error as Error, {
+      url: response.url,
+      status: response.status,
+    });
+    
+    throw new ApiError(
+      response.status,
+      0,
+      'Failed to parse response as JSON'
+    );
+  }
+};

@@ -3,7 +3,7 @@
  * Manages advertising slot configurations
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 import type { Slot, SlotFormData } from '../../types';
@@ -18,7 +18,7 @@ export const realSlotsApi = {
     const response = await realApiFetch(`${SLOTS_BASE_URL}`, {
       method: 'GET',
     });
-    return await response.json();
+    return parseJsonResponse<Slot[]>(response).then(data => data || []);
   },
 
   /**
@@ -28,7 +28,9 @@ export const realSlotsApi = {
     const response = await realApiFetch(`${SLOTS_BASE_URL}/${id}`, {
       method: 'GET',
     });
-    return await response.json();
+    const data = await parseJsonResponse<SlotFormData>(response);
+    if (!data) throw new Error('Empty response for slot');
+    return data;
   },
 
   /**
@@ -39,7 +41,9 @@ export const realSlotsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return await response.json();
+    const result = await parseJsonResponse<Slot>(response);
+    if (!result) throw new Error('Empty response from slot creation');
+    return result;
   },
 
   /**
@@ -50,7 +54,9 @@ export const realSlotsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
-    return await response.json();
+    const result = await parseJsonResponse<Slot>(response);
+    if (!result) throw new Error('Empty response from slot update');
+    return result;
   },
 
   /**
@@ -61,6 +67,8 @@ export const realSlotsApi = {
       method: 'PATCH',
       body: JSON.stringify({ isBlocked }),
     });
-    return await response.json();
+    const result = await parseJsonResponse<Slot>(response);
+    if (!result) throw new Error('Empty response from slot block');
+    return result;
   },
 };

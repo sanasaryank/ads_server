@@ -3,7 +3,7 @@
  * Manages placement items for campaign targeting
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { env } from '../../config/env';
 import type { Placement } from '../../types';
 
@@ -19,6 +19,6 @@ export const realPlacementsApi = {
     const response = await realApiFetch(`${PLACEMENTS_BASE_URL}/${type}/${restaurantId}`, {
       method: 'GET',
     });
-    return await response.json();
+    return parseJsonResponse<Placement[]>(response).then(data => data || []);
   },
 };

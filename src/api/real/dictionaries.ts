@@ -1,5 +1,5 @@
 import type { DictionaryItem, DictionaryKey, LocationsResponse } from '../../types';
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -12,7 +12,7 @@ export const realDictionariesApi = {
       method: 'GET',
     });
 
-    return response.json();
+    return parseJsonResponse<DictionaryItem[]>(response).then(data => data || []);
   },
 
   getLocations: async (): Promise<LocationsResponse> => {
@@ -20,6 +20,8 @@ export const realDictionariesApi = {
       method: 'GET',
     });
 
-    return response.json();
+    const data = await parseJsonResponse<LocationsResponse>(response);
+    if (!data) throw new Error('Empty response from locations');
+    return data;
   },
 };

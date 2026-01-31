@@ -1,5 +1,5 @@
 import type { RestaurantListItem, RestaurantCampaign } from '../../types';
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -11,7 +11,7 @@ export const realRestaurantsApi = {
       method: 'GET',
     });
 
-    return response.json();
+    return parseJsonResponse<RestaurantListItem[]>(response).then(data => data || []);
   },
 
   block: async (id: string, isBlocked: boolean): Promise<RestaurantListItem> => {
@@ -20,7 +20,9 @@ export const realRestaurantsApi = {
       body: JSON.stringify({ isBlocked }),
     });
 
-    return response.json();
+    const data = await parseJsonResponse<RestaurantListItem>(response);
+    if (!data) throw new Error('Empty response from block operation');
+    return data;
   },
 
   getRestaurantCampaigns: async (restaurantId: string): Promise<RestaurantCampaign[]> => {
@@ -28,9 +30,9 @@ export const realRestaurantsApi = {
       method: 'GET',
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse<RestaurantCampaign[]>(response);
     // Ensure placements array exists (backwards compatibility)
-    return data.map((campaign: any) => ({
+    return (data || []).map((campaign: any) => ({
       ...campaign,
       slot: {
         ...campaign.slot,

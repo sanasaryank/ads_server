@@ -3,7 +3,7 @@
  * Manages advertiser entities
  */
 
-import { realApiFetch } from './client';
+import { realApiFetch, parseJsonResponse } from './client';
 import { createApiTransformer } from './transformer';
 import { env } from '../../config/env';
 import { API_ENDPOINTS } from '../../config/api';
@@ -53,8 +53,8 @@ export const realAdvertisersApi = {
     const response = await realApiFetch(`${ADVERTISERS_BASE_URL}`, {
       method: 'GET',
     });
-    const apiAdvertisers = await response.json() as ApiAdvertiser[];
-    return advertiserTransformer.fromApiList(apiAdvertisers);
+    const apiAdvertisers = await parseJsonResponse<ApiAdvertiser[]>(response);
+    return advertiserTransformer.fromApiList(apiAdvertisers || []);
   },
 
   /**
@@ -64,7 +64,8 @@ export const realAdvertisersApi = {
     const response = await realApiFetch(`${ADVERTISERS_BASE_URL}/${id}`, {
       method: 'GET',
     });
-    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    const apiAdvertiser = await parseJsonResponse<ApiAdvertiser>(response);
+    if (!apiAdvertiser) throw new Error('Empty response for advertiser');
     return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
@@ -77,7 +78,8 @@ export const realAdvertisersApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    const apiAdvertiser = await parseJsonResponse<ApiAdvertiser>(response);
+    if (!apiAdvertiser) throw new Error('Empty response for created advertiser');
     return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
@@ -94,7 +96,8 @@ export const realAdvertisersApi = {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
-    const apiAdvertiser = await response.json() as ApiAdvertiser;
+    const apiAdvertiser = await parseJsonResponse<ApiAdvertiser>(response);
+    if (!apiAdvertiser) throw new Error('Empty response for updated advertiser');
     return advertiserTransformer.fromApi(apiAdvertiser);
   },
 
