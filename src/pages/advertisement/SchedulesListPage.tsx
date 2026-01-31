@@ -1,4 +1,4 @@
-import { useMemo, useCallback, memo, useEffect } from 'react';
+import { useMemo, useCallback, memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Box,
@@ -6,10 +6,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton as MuiIconButton,
   useTheme,
   Backdrop,
   CircularProgress,
@@ -17,11 +13,10 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Close as CloseIcon,
   FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { Button, IconButton, Switch, Select } from '../../components/ui/atoms';
-import { FormField, FilterDrawer, SearchField, MultilingualNameField, SwitchField, TimeSelectField, ConfirmDialog } from '../../components/ui/molecules';
+import { GenericFormDialog, FilterDrawer, SearchField, MultilingualNameField, SwitchField, TimeSelectField, ConfirmDialog } from '../../components/ui/molecules';
 import { useSnackbar } from 'notistack';
 import { useFilters, useDrawer, useFetch, useMultilingualName, useDialogState, useConfirmDialog, useDebounce, useEditWithLoading, useCommonFilters } from '../../hooks';
 import { schedulesApi } from '../../api';
@@ -29,8 +24,7 @@ import { isApiError } from '../../api/errors';
 import { logger } from '../../utils/logger';
 import type { Schedule, ScheduleFormData, DaySchedule } from '../../types';
 import { z } from 'zod';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller } from 'react-hook-form';
 import { PageHeader, FiltersContainer, FlexRowCenter } from '../../components/ui/styled';
 
 const DAYS: Array<DaySchedule['day']> = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -129,6 +123,17 @@ const SchedulesListPage = memo(() => {
       return data as any;
     },
     onSuccess: (data, schedule) => {
+      const formValues = {
+        name: data.name,
+        color: data.color,
+        weekSchedule: data.weekSchedule.map(day => ({
+          ...day,
+          startTime: hourToTimeString(day.startTime),
+          endTime: hourToTimeString(day.endTime),
+        })),
+        blocked: data.blocked,
+      };
+      setFormData(formValues);
       formDialog.openDialog({ id: String(schedule.id), data: data as Schedule & { hash: string } });
     },
     getEntityId: (schedule) => schedule.id,
@@ -159,28 +164,20 @@ const SchedulesListPage = memo(() => {
   const timeOptions = useMemo(() => generateTimeOptions(), []);
 
   const schema = createScheduleSchema(t);
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { isSubmitting },
-  } = useForm<ScheduleFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: { ARM: '', RUS: '', ENG: '' },
-      color: '#28282E',
-      weekSchedule: DAYS.map((day) => ({
-        day,
-        enabled: true,
-        startTime: '09:00',
-        endTime: '17:00',
-      })),
-      blocked: false,
-    },
-  });
+  
+  const defaultFormValues: ScheduleFormValues = useMemo(() => ({
+    name: { ARM: '', RUS: '', ENG: '' },
+    color: '#28282E',
+    weekSchedule: DAYS.map((day) => ({
+      day,
+      enabled: true,
+      startTime: '09:00',
+      endTime: '17:00',
+    })),
+    blocked: false,
+  }), []);
 
-  const weekSchedule = watch('weekSchedule');
+  const [formData, setFormData] = useState<ScheduleFormValues>(defaultFormValues);
 
   // Load data is now handled by useFetch hook
 
@@ -188,42 +185,14 @@ const SchedulesListPage = memo(() => {
     if (schedule) {
       handleEdit(schedule);
     } else {
+      setFormData(defaultFormValues);
       formDialog.openDialog();
-      reset({
-        name: { ARM: '', RUS: '', ENG: '' },
-        color: '#28282E',
-        weekSchedule: DAYS.map((day) => ({
-          day,
-          enabled: true,
-          startTime: '09:00',
-          endTime: '17:00',
-        })),
-        blocked: false,
-      });
     }
-  }, [formDialog, reset, handleEdit]);
+  }, [formDialog, handleEdit, defaultFormValues]);
 
   const handleCloseDialog = useCallback(() => {
     formDialog.closeDialog();
-    reset();
-  }, [formDialog, reset]);
-
-  // Load form data when dialog opens in edit mode
-  useEffect(() => {
-    if (formDialog.open && formDialog.data?.data) {
-      const fullSchedule = formDialog.data.data;
-      reset({
-        name: fullSchedule.name,
-        color: fullSchedule.color,
-        weekSchedule: fullSchedule.weekSchedule.map(day => ({
-          ...day,
-          startTime: hourToTimeString(day.startTime),
-          endTime: hourToTimeString(day.endTime),
-        })),
-        blocked: fullSchedule.blocked,
-      });
-    }
-  }, [formDialog.open, formDialog.data, reset]);
+  }, [formDialog]);
 
   const handleOpenFilters = useCallback(() => {
     updateTempFilter('search', filters.search);
@@ -486,217 +455,166 @@ const SchedulesListPage = memo(() => {
           </Box>
         )}
 
-      <Dialog
+      <GenericFormDialog
         open={formDialog.open}
+        title={formDialog.data?.id ? t('schedules.editTitle') : t('schedules.addTitle')}
+        schema={schema}
+        defaultValues={formData}
+        onSubmit={handleFormSubmit}
         onClose={handleCloseDialog}
         maxWidth="md"
-        fullWidth
-        disableRestoreFocus
-        hideBackdrop
-        container={() => document.getElementById('modal-root')}
-        TransitionProps={{
-          timeout: 0,
-        }}
-        sx={{
-          '& .MuiDialog-container': {
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          },
-        }}
-        PaperProps={{
-          sx: {
-            height: '90vh',
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            borderRadius: 3,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            pb: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Box component="span" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            {formDialog.data?.id ? t('schedules.editTitle') : t('schedules.addTitle')}
-          </Box>
-          <MuiIconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <CloseIcon />
-          </MuiIconButton>
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            pt: 0,
-            pb: 0,
-            flexGrow: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Box
-            component="form"
-            onSubmit={handleSubmit(handleFormSubmit)}
-            sx={{
-              flexGrow: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <Box sx={{ flexGrow: 1, overflow: 'auto', pb: 2, pt: 3, px: 3 }}>
-              <Stack spacing={3}>
-                <Box>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    {t('schedules.fields.name')} *
-                  </Typography>
-                  <MultilingualNameField
-                    control={control}
-                    name="name"
-                    required
-                  />
-                </Box>
-
-                <Controller
-                  name="color"
+        submitText={t('common.save')}
+        cancelText={t('common.cancel')}
+        fields={[
+          {
+            name: 'name',
+            label: t('schedules.fields.name'),
+            type: 'text',
+            required: true,
+            render: (control) => (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  {t('schedules.fields.name')} *
+                </Typography>
+                <MultilingualNameField
                   control={control}
-                  render={({ field, fieldState: { error } }) => (
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        {t('schedules.fields.color')}
-                      </Typography>
-                      <input
-                        {...field}
-                        type="color"
-                        style={{
-                          width: '100%',
-                          height: '40px',
-                          border: error ? `1px solid ${theme.palette.error.main}` : `1px solid ${theme.palette.divider}`,
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                        }}
-                      />
-                      {error && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
-                          {error.message}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
+                  name="name"
+                  required
                 />
-
+              </Box>
+            ),
+          },
+          {
+            name: 'color',
+            label: t('schedules.fields.color'),
+            type: 'text',
+            required: true,
+            render: (control) => (
+              <Controller
+                name="color"
+                control={control}
+                render={({ field, fieldState: { error } }) => (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      {t('schedules.fields.color')}
+                    </Typography>
+                    <input
+                      {...field}
+                      type="color"
+                      style={{
+                        width: '100%',
+                        height: '40px',
+                        border: error ? `1px solid ${theme.palette.error.main}` : `1px solid ${theme.palette.divider}`,
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    {error && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                        {error.message}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              />
+            ),
+          },
+          {
+            name: 'weekSchedule',
+            label: t('schedules.fields.weekSchedule'),
+            type: 'text',
+            render: (control) => {
+              // Import useWatch from react-hook-form at the top if not already
+              // Use Controller to watch the weekSchedule array properly
+              return (
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 2 }}>
                     {t('schedules.fields.weekSchedule')}
                   </Typography>
                   <Stack spacing={2}>
                     {DAYS.map((day, index) => (
-                      <Box key={day}>
-                        <Box
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: 'auto 100px 100px 100px 100px',
-                            alignItems: 'center',
-                            gap: 2,
-                            mb: 1,
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <SwitchField
-                              control={control}
-                              name={`weekSchedule.${index}.enabled`}
-                              label={t(`schedules.days.${day.toLowerCase()}`)}
-                            />
+                      <Controller
+                        key={day}
+                        name={`weekSchedule.${index}.enabled`}
+                        control={control}
+                        render={({ field: enabledField }) => (
+                          <Box>
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 100px 100px 100px 100px',
+                                alignItems: 'center',
+                                gap: 2,
+                                mb: 1,
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SwitchField
+                                  control={control}
+                                  name={`weekSchedule.${index}.enabled`}
+                                  label={t(`schedules.days.${day.toLowerCase()}`)}
+                                />
+                              </Box>
+                              {enabledField.value ? (
+                                <>
+                                  <TimeSelectField
+                                    control={control}
+                                    name={`weekSchedule.${index}.startTime`}
+                                    options={timeOptions}
+                                  />
+                                  <TimeSelectField
+                                    control={control}
+                                    name={`weekSchedule.${index}.endTime`}
+                                    options={timeOptions}
+                                  />
+                                  <Controller
+                                    name={`weekSchedule.${index}.startTime`}
+                                    control={control}
+                                    render={({ field: startField }) => (
+                                      <Controller
+                                        name={`weekSchedule.${index}.endTime`}
+                                        control={control}
+                                        render={({ field: endField }) => (
+                                          <Typography
+                                            variant="body2"
+                                            sx={{
+                                              bgcolor: 'action.hover',
+                                              px: 2,
+                                              py: 0.5,
+                                              borderRadius: 10,
+                                              textAlign: 'center',
+                                            }}
+                                          >
+                                            {calculateDuration(
+                                              startField.value || '00:00',
+                                              endField.value || '00:00'
+                                            )}
+                                          </Typography>
+                                        )}
+                                      />
+                                    )}
+                                  />
+                                </>
+                              ) : (
+                                <Box sx={{ gridColumn: 'span 3' }} />
+                              )}
+                            </Box>
                           </Box>
-                          {weekSchedule[index]?.enabled ? (
-                            <>
-                              <TimeSelectField
-                                control={control}
-                                name={`weekSchedule.${index}.startTime`}
-                                options={timeOptions}
-                              />
-                              <TimeSelectField
-                                control={control}
-                                name={`weekSchedule.${index}.endTime`}
-                                options={timeOptions}
-                              />
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  bgcolor: 'action.hover',
-                                  px: 2,
-                                  py: 0.5,
-                                  borderRadius: 10,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {calculateDuration(
-                                  weekSchedule[index]?.startTime || '00:00',
-                                  weekSchedule[index]?.endTime || '00:00'
-                                )}
-                              </Typography>
-                            </>
-                          ) : (
-                            <Box sx={{ gridColumn: 'span 3' }} />
-                          )}
-                        </Box>
-                      </Box>
+                        )}
+                      />
                     ))}
                   </Stack>
                 </Box>
-
-                <FormField
-                  name="blocked"
-                  control={control}
-                  type="checkbox"
-                  label={t('schedules.fields.blocked')}
-                />
-              </Stack>
-            </Box>
-            <Box
-              sx={{
-                flexShrink: 0,
-                px: 3,
-                py: 2,
-                borderTop: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 2,
-                position: 'sticky',
-                bottom: 0,
-              }}
-            >
-              <Button
-                onClick={handleCloseDialog}
-                variant="outlined"
-                disabled={isSubmitting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" variant="contained" disabled={isSubmitting}>
-                {formDialog.data ? t('common.save') : t('common.add')}
-              </Button>
-            </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
+              );
+            },
+          },
+          {
+            name: 'blocked',
+            label: t('schedules.fields.blocked'),
+            type: 'checkbox',
+          },
+        ]}
+      />
 
       {/* Filters Drawer */}
       <FilterDrawer

@@ -37,6 +37,20 @@ const IFRAME_STYLE: React.CSSProperties = {
 const MAX_HTML_CACHE_SIZE = 50;
 
 /**
+ * Maximum age for cached HTML (5 minutes)
+ */
+const MAX_CACHE_AGE = 5 * 60 * 1000;
+
+/**
+ * Cache entry with metadata
+ */
+interface CacheEntry {
+  html: string;
+  timestamp: number;
+  size: number;
+}
+
+/**
  * Fetches external HTML and fixes encoding issues
  */
 const fetchAndFixHtml = async (url: string): Promise<string | null> => {
@@ -260,11 +274,10 @@ export default memo(function CreativesListPage() {
     campaignId: '',
   });
   
-  // Store fetched HTML content for external URLs
-  const [htmlCache, setHtmlCache] = useState<Record<string, string>>({});
+  // Store fetched HTML content for external URLs with metadata
+  const [htmlCache, setHtmlCache] = useState<Record<string, CacheEntry>>({});
   const [htmlLoading, setHtmlLoading] = useState<Record<string, boolean>>({});
   const [htmlErrors, setHtmlErrors] = useState<Record<string, boolean>>({});
-  const cacheAccessOrderRef = useRef<string[]>([]);
   
   // Pagination state
   const [page, setPage] = useState(1);
@@ -448,34 +461,36 @@ export default memo(function CreativesListPage() {
   const endIndex = startIndex + rowsPerPage;
   const paginatedCreatives = filteredCreatives.slice(startIndex, endIndex);
   
-  // Evict old cache entries when limit is exceeded (LRU strategy)
-  const evictOldCacheEntries = useCallback((newUrl: string) => {
-    const accessOrder = cacheAccessOrderRef.current;
+  // Evict old cache entries based on age, size, and count (LRU + TTL strategy)
+  const evictOldCacheEntries = useCallback(() => {
+    const now = Date.now();
+    const newCache: Record<string, CacheEntry> = {};
     
-    // Update access order (move to end if exists, add if new)
-    const existingIndex = accessOrder.indexOf(newUrl);
-    if (existingIndex !== -1) {
-      accessOrder.splice(existingIndex, 1);
-    }
-    accessOrder.push(newUrl);
-    
-    // If cache is full, remove oldest entries
-    if (accessOrder.length > MAX_HTML_CACHE_SIZE) {
-      const toRemove = accessOrder.splice(0, accessOrder.length - MAX_HTML_CACHE_SIZE);
-      
-      setHtmlCache(prev => {
-        const newCache = { ...prev };
-        toRemove.forEach(url => delete newCache[url]);
-        return newCache;
+    // Filter by age, sort by timestamp (most recent first), and limit count
+    Object.entries(htmlCache)
+      .filter(([_, entry]) => now - entry.timestamp < MAX_CACHE_AGE)
+      .sort((a, b) => b[1].timestamp - a[1].timestamp)
+      .slice(0, MAX_HTML_CACHE_SIZE)
+      .forEach(([key, entry]) => {
+        newCache[key] = entry;
       });
+    
+    // Only update if cache changed
+    if (Object.keys(newCache).length !== Object.keys(htmlCache).length) {
+      setHtmlCache(newCache);
       
+      // Clean up errors for evicted entries
       setHtmlErrors(prev => {
         const newErrors = { ...prev };
-        toRemove.forEach(url => delete newErrors[url]);
+        Object.keys(prev).forEach(key => {
+          if (!newCache[key]) {
+            delete newErrors[key];
+          }
+        });
         return newErrors;
       });
     }
-  }, []);
+  }, [htmlCache]);
   
   // Lazy load HTML for visible creatives
   useEffect(() => {
@@ -488,15 +503,20 @@ export default memo(function CreativesListPage() {
             const html = await fetchAndFixHtml(creative.dataUrl);
             if (!isMountedRef.current) return;
             if (html) {
-              evictOldCacheEntries(creative.dataUrl);
-              setHtmlCache(prev => ({ ...prev, [creative.dataUrl]: html }));
+              // Create cache entry with metadata
+              const entry: CacheEntry = {
+                html,
+                timestamp: Date.now(),
+                size: html.length,
+              };
+              setHtmlCache(prev => ({ ...prev, [creative.dataUrl]: entry }));
+              // Evict old entries after adding new one
+              evictOldCacheEntries();
             } else {
-              evictOldCacheEntries(creative.dataUrl);
               setHtmlErrors(prev => ({ ...prev, [creative.dataUrl]: true }));
             }
           } catch (error) {
             if (!isMountedRef.current) return;
-            evictOldCacheEntries(creative.dataUrl);
             setHtmlErrors(prev => ({ ...prev, [creative.dataUrl]: true }));
           } finally {
             if (isMountedRef.current) {
@@ -516,6 +536,15 @@ export default memo(function CreativesListPage() {
     setPage(1);
   }, [debouncedSearch, filters.status, filters.campaignId]);
   
+  // Periodic cleanup of stale cache entries
+  useEffect(() => {
+    const interval = setInterval(() => {
+      evictOldCacheEntries();
+    }, 60000); // Run every minute
+    
+    return () => clearInterval(interval);
+  }, [evictOldCacheEntries]);
+  
   // Cleanup on unmount - clear caches to prevent memory leaks
   useEffect(() => {
     return () => {
@@ -523,7 +552,6 @@ export default memo(function CreativesListPage() {
       setHtmlCache({});
       setHtmlLoading({});
       setHtmlErrors({});
-      cacheAccessOrderRef.current = [];
     };
   }, []);
 
@@ -652,11 +680,11 @@ export default memo(function CreativesListPage() {
                       );
                     }
                     
-                    const cachedHtml = htmlCache[creative.dataUrl];
-                    if (cachedHtml) {
+                    const cachedEntry = htmlCache[creative.dataUrl];
+                    if (cachedEntry) {
                       return (
                         <iframe
-                          srcDoc={cachedHtml}
+                          srcDoc={cachedEntry.html}
                           style={IFRAME_STYLE}
                           title={getDisplayName(creative.name)}
                           sandbox="allow-scripts"
@@ -948,11 +976,11 @@ export default memo(function CreativesListPage() {
                         // Use dataUrl for preview
                         if (dataUrl) {
                           // Check if we have cached HTML for external URL
-                          const cachedHtml = htmlCache[dataUrl as string];
-                          if (cachedHtml) {
+                          const cachedEntry = htmlCache[dataUrl as string];
+                          if (cachedEntry) {
                             return (
                               <iframe
-                                srcDoc={cachedHtml}
+                                srcDoc={cachedEntry.html}
                                 style={IFRAME_STYLE}
                                 title="Preview"
                                 sandbox="allow-scripts"

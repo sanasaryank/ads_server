@@ -1,9 +1,9 @@
-import { useMemo, useCallback, memo, useEffect } from 'react';
+import { useMemo, useCallback, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Stack, Typography, Dialog, DialogTitle, DialogContent, IconButton as MuiIconButton, Backdrop, CircularProgress } from '@mui/material';
-import { Add as AddIcon, FilterList as FilterListIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Box, Stack, Typography, Backdrop, CircularProgress } from '@mui/material';
+import { Add as AddIcon, FilterList as FilterListIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
-import { DataTable, SearchField, Pagination, ConfirmDialog, FilterDrawer, FormField, MultilingualNameField } from '../../components/ui/molecules';
+import { DataTable, SearchField, Pagination, ConfirmDialog, FilterDrawer, GenericFormDialog, MultilingualNameField } from '../../components/ui/molecules';
 import type { Column } from '../../components/ui/molecules/DataTable';
 import { Button, IconButton, Switch, Select } from '../../components/ui/atoms';
 import { useTableState, useConfirmDialog, useDrawer, useDialogState, useEditWithLoading, useEntityList, useMultilingualName, useDebounce, useCommonFilters } from '../../hooks';
@@ -12,8 +12,6 @@ import { isApiError } from '../../api/errors';
 import { logger } from '../../utils/logger';
 import type { Advertiser, AdvertiserFormData } from '../../types';
 import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader, FiltersContainer } from '../../components/ui/styled';
 
 const createAdvertiserSchema = (t: (key: string) => string) =>
@@ -91,15 +89,14 @@ const AdvertisersListPage = memo(() => {
   // Form management
   const schema = useMemo(() => createAdvertiserSchema(t), [t]);
   
-  const form = useForm<AdvertiserFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      name: { ARM: '', RUS: '', ENG: '' },
-      tin: '',
-      description: '',
-      blocked: false,
-    },
-  });
+  const defaultFormValues: AdvertiserFormValues = useMemo(() => ({
+    name: { ARM: '', RUS: '', ENG: '' },
+    tin: '',
+    description: '',
+    blocked: false,
+  }), []);
+
+  const [formData, setFormData] = useState<AdvertiserFormValues>(defaultFormValues);
 
   // Dialog state management
   const formDialog = useDialogState<{ id?: string; data?: AdvertiserFormData | null }>();
@@ -112,6 +109,12 @@ const AdvertisersListPage = memo(() => {
       return data as any;
     },
     onSuccess: (data, advertiser) => {
+      setFormData({
+        name: data.name,
+        tin: data.tin,
+        description: data.description || '',
+        blocked: data.blocked,
+      });
       formDialog.openDialog({ id: advertiser.id, data });
     },
     getEntityId: (advertiser) => advertiser.id,
@@ -125,37 +128,18 @@ const AdvertisersListPage = memo(() => {
     defaultSortDirection: 'asc',
   });
 
-  // Load form data when dialog opens in edit mode
-  useEffect(() => {
-    if (formDialog.open && formDialog.data?.data) {
-      const advertiser = formDialog.data.data;
-      form.reset({
-        name: advertiser.name,
-        tin: advertiser.tin,
-        description: advertiser.description || '',
-        blocked: advertiser.blocked,
-      });
-    }
-  }, [formDialog.open, formDialog.data, form]);
-
   const handleOpenDialog = useCallback((advertiser?: Advertiser) => {
     if (advertiser) {
       handleEdit(advertiser);
     } else {
+      setFormData(defaultFormValues);
       formDialog.openDialog();
-      form.reset({
-        name: { ARM: '', RUS: '', ENG: '' },
-        tin: '',
-        description: '',
-        blocked: false,
-      });
     }
-  }, [handleEdit, formDialog, form]);
+  }, [handleEdit, formDialog, defaultFormValues]);
 
   const handleCloseDialog = useCallback(() => {
     formDialog.closeDialog();
-    form.reset();
-  }, [formDialog, form]);
+  }, [formDialog]);
 
   // Block/unblock handler with confirmation
   const handleBlock = useCallback(
@@ -323,136 +307,55 @@ const AdvertisersListPage = memo(() => {
       />
 
       {/* Form Dialog */}
-      <Dialog 
-        open={formDialog.open} 
-        onClose={handleCloseDialog} 
-        maxWidth="sm" 
-        fullWidth
-        disableRestoreFocus
-        hideBackdrop
-        container={() => document.getElementById('modal-root')}
-        TransitionProps={{
-          timeout: 0,
-        }}
-        sx={{
-          '& .MuiDialog-container': {
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          },
-        }}
-        PaperProps={{
-          sx: {
-            height: '90vh',
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            borderRadius: 3,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            pb: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            flexShrink: 0,
-          }}
-        >
-          <Box component="span" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            {formDialog.data?.id ? t('advertisers.editTitle') : t('advertisers.addTitle')}
-          </Box>
-          <MuiIconButton
-            aria-label="close"
-            onClick={handleCloseDialog}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <CloseIcon />
-          </MuiIconButton>
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            pt: 3,
-            pb: 0,
-            flexGrow: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Box 
-            component="form" 
-            onSubmit={form.handleSubmit(onSubmit)} 
-            sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          >
-            <Box sx={{ flexGrow: 1, overflow: 'auto', pb: 2 }}>
-              <Stack spacing={2} sx={{ mt: 1 }}>
+      <GenericFormDialog
+        open={formDialog.open}
+        title={formDialog.data?.id ? t('advertisers.editTitle') : t('advertisers.addTitle')}
+        schema={schema}
+        defaultValues={formData}
+        onSubmit={onSubmit}
+        onClose={handleCloseDialog}
+        maxWidth="sm"
+        submitText={t('common.save')}
+        cancelText={t('common.cancel')}
+        fields={[
+          {
+            name: 'name',
+            label: t('advertisers.fields.name'),
+            type: 'text',
+            required: true,
+            render: (control) => (
+              <Box>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   {t('advertisers.fields.name')}
                 </Typography>
-                
                 <MultilingualNameField
-                  control={form.control}
+                  control={control}
                   name="name"
                   required
                 />
-
-                <FormField
-                  name="tin"
-                  control={form.control}
-                  type="text"
-                  label={t('advertisers.fields.tin')}
-                  required
-                />
-                <FormField
-                  name="description"
-                  control={form.control}
-                  type="text"
-                  label={t('advertisers.fields.description')}
-                  multiline
-                  rows={3}
-                />
-                <FormField
-                  name="blocked"
-                  control={form.control}
-                  type="checkbox"
-                  label={t('advertisers.fields.blocked')}
-                />
-              </Stack>
-            </Box>
-            
-            {/* Form Actions */}
-            <Box
-              sx={{
-                flexShrink: 0,
-                px: 3,
-                py: 2,
-                borderTop: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 2,
-                position: 'sticky',
-                bottom: 0,
-              }}
-            >
-              <Button onClick={handleCloseDialog} variant="outlined" disabled={form.formState.isSubmitting}>
-                {t('common.cancel')}
-              </Button>
-              <Button type="submit" variant="contained" disabled={form.formState.isSubmitting}>
-                {t('common.save')}
-              </Button>
-            </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
+              </Box>
+            ),
+          },
+          {
+            name: 'tin',
+            label: t('advertisers.fields.tin'),
+            type: 'text',
+            required: true,
+          },
+          {
+            name: 'description',
+            label: t('advertisers.fields.description'),
+            type: 'text',
+            multiline: true,
+            rows: 3,
+          },
+          {
+            name: 'blocked',
+            label: t('advertisers.fields.blocked'),
+            type: 'checkbox',
+          },
+        ]}
+      />
 
       {/* Filter Drawer */}
       <FilterDrawer

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo, useEffect } from 'react';
+import { useState, useMemo, useCallback, memo, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Stack, Typography, Tabs, Tab, Dialog, DialogTitle, DialogContent, IconButton as MuiIconButton, Backdrop, CircularProgress } from '@mui/material';
 import { Add as AddIcon, FilterList as FilterListIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -21,6 +21,39 @@ import { PageHeader, FiltersContainer } from '../../components/ui/styled';
 import { useAdvertisersStore } from '../../store/advertisersStore';
 import { useDictionariesStore } from '../../store/dictionariesStore';
 import { useRestaurantsStore } from '../../store/restaurantsStore';
+
+/**
+ * Reference counting system for store cleanup
+ * Tracks which components are using each store to prevent premature clearing
+ */
+const storeUsers = new Map<string, Set<string>>();
+
+/**
+ * Hook for managing store cleanup with reference counting
+ */
+const useStoreWithCleanup = (storeName: string, componentId: string, clearFn: () => void) => {
+  useEffect(() => {
+    // Register this component as a user of the store
+    if (!storeUsers.has(storeName)) {
+      storeUsers.set(storeName, new Set());
+    }
+    storeUsers.get(storeName)!.add(componentId);
+    
+    return () => {
+      // Unregister this component
+      const users = storeUsers.get(storeName);
+      if (users) {
+        users.delete(componentId);
+        // Only clear when no components are using it
+        if (users.size === 0) {
+          clearFn();
+          storeUsers.delete(storeName);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeName, componentId]);
+};
 
 const createCampaignSchema = (t: (key: string) => string) =>
   z.object({
@@ -85,6 +118,7 @@ const createCampaignSchema = (t: (key: string) => string) =>
 type CampaignFormValues = z.infer<ReturnType<typeof createCampaignSchema>>;
 
 export default memo(function CampaignsListPage() {
+  const componentId = useId();
   const { t } = useTranslation();
   const { getDisplayName } = useMultilingualName();
   const commonFilters = useCommonFilters({ getDisplayName });
@@ -92,6 +126,11 @@ export default memo(function CampaignsListPage() {
   const confirmDialog = useConfirmDialog();
   const filterDrawer = useDrawer();
   const formDialog = useDialogState<{ id?: string; data?: Campaign | null }>();
+  
+  // Setup store cleanup with reference counting
+  useStoreWithCleanup('advertisers', componentId, () => useAdvertisersStore.getState().clear());
+  useStoreWithCleanup('dictionaries', componentId, () => useDictionariesStore.getState().clear());
+  useStoreWithCleanup('restaurants', componentId, () => useRestaurantsStore.getState().clear());
   
   // Edit with loading hook
   const { isLoading: isLoadingEdit, handleEdit } = useEditWithLoading<Campaign>({
@@ -213,15 +252,6 @@ export default memo(function CampaignsListPage() {
   const watchedRestaurantTypesMode = useWatch({ control, name: 'restaurantTypesMode' });
   const watchedRestaurantTypeIds = useWatch({ control, name: 'restaurantTypes' });
   const watchedMenuTypesMode = useWatch({ control, name: 'menuTypesMode' });
-
-  // Cleanup stores on unmount to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      useAdvertisersStore.getState().clear();
-      useDictionariesStore.getState().clear();
-      useRestaurantsStore.getState().clear();
-    };
-  }, []);
   const watchedMenuTypeIds = useWatch({ control, name: 'menuTypes' });
 
   const handleOpenDialog = useCallback(async (campaign?: Campaign) => {
