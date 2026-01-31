@@ -35,35 +35,12 @@
       "unblocked": "Успешно разблокировано",
       "saved": "Успешно сохранено"
     },
-    "error": {
-      "loadFailed": "Не удалось загрузить данные",
-      "saveFailed": "Не удалось сохранить",
-      "deleteFailed": "Не удалось удалить"
-    },
-    "savedSuccessfully": "Успешно сохранено",
-    "createdSuccessfully": "Успешно создано",
-    "deletedSuccessfully": "Успешно удалено",
-    "updatedSuccessfully": "Успешно обновлено",
     "logout": "Выход",
     "yes": "Да",
     "no": "Нет",
     "confirm": "Подтвердить",
     "required": "Обязательно",
     "id": "ID"
-  },
-  "error": {
-    "somethingWentWrong": "Что-то пошло не так",
-    "duplicate": "Этот элемент уже существует",
-    "notFound": "Элемент не найден",
-    "changed": "Элемент был изменен другим пользователем. Пожалуйста, перезагрузите и попробуйте снова.",
-    "unknown": "Произошла неизвестная ошибка"
-  },
-  "auth": {
-    "login": "Вход",
-    "email": "Email",
-    "password": "Пароль",
-    "signIn": "Войти",
-    "invalidCredentials": "Неверный email или пароль"
   },
   "error": {
     "somethingWentWrong": "Что-то пошло не так",
@@ -78,7 +55,18 @@
     "dictionariesLoadFailed": "Не удалось загрузить справочники",
     "dictionariesLoadFailedMessage": "Не удалось загрузить данные справочников. Пожалуйста, попробуйте снова.",
     "statisticsLoadFailed": "Не удалось загрузить статистику",
-    "statisticsLoadFailedMessage": "Не удалось загрузить данные статистики. Пожалуйста, попробуйте снова."
+    "statisticsLoadFailedMessage": "Не удалось загрузить данные статистики. Пожалуйста, попробуйте снова.",
+    "duplicate": "Этот элемент уже существует",
+    "notFound": "Элемент не найден",
+    "changed": "Элемент был изменен другим пользователем. Пожалуйста, перезагрузите и попробуйте снова.",
+    "unknown": "Произошла неизвестная ошибка"
+  },
+  "auth": {
+    "login": "Вход",
+    "email": "Email",
+    "password": "Пароль",
+    "signIn": "Войти",
+    "invalidCredentials": "Неверный email или пароль"
   },
   "menu": {
     "restaurants": "Рестораны",
@@ -382,7 +370,6 @@
     "addTitle": "Добавить новую кампанию",
     "editTitle": "Редактировать кампанию",
     "search": "Поиск кампаний...",
-    "searchPlaceholder": "Поиск кампаний...",
     "noCampaignsFound": "Кампании не найдены",
     "fields": {
       "advertiser": "Рекламодатель",
@@ -438,7 +425,6 @@
     "minWidth": "Мин. ширина",
     "maxWidth": "Макс. ширина",
     "dataUrl": "URL данных",
-    "preview": "Предпросмотр",
     "selectCampaign": "Выберите кампанию",
     "blockConfirmTitle": "Заблокировать креатив?",
     "unblockConfirmTitle": "Разблокировать креатив?",

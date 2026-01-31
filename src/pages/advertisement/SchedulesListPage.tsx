@@ -498,10 +498,11 @@ const SchedulesListPage = memo(() => {
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       {t('schedules.fields.color')}
                     </Typography>
-                    <input
+                    <Box
+                      component="input"
                       {...field}
                       type="color"
-                      style={{
+                      sx={{
                         width: '100%',
                         height: '40px',
                         border: error ? `1px solid ${theme.palette.error.main}` : `1px solid ${theme.palette.divider}`,
@@ -611,7 +612,7 @@ const SchedulesListPage = memo(() => {
           {
             name: 'blocked',
             label: t('schedules.fields.blocked'),
-            type: 'checkbox',
+            type: 'switch',
           },
         ]}
       />

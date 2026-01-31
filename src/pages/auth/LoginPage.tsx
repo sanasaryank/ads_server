@@ -86,10 +86,11 @@ export const LoginPage = () => {
         <Box sx={{ width: '100%', maxWidth: 400 }}>
           {/* Logo */}
           <Box sx={{ mb: 4, textAlign: 'left' }}>
-            <img
+            <Box
+              component="img"
               src="/logo.svg"
               alt="TRIO"
-              style={{ height: 32, marginBottom: 16 }}
+              sx={{ height: 32, mb: 2 }}
             />
           </Box>
 

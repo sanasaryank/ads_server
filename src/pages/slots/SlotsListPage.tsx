@@ -31,17 +31,24 @@ import ConfirmDialog from '../../components/ui/molecules/ConfirmDialog';
 // Slot Form Dialog
 import { SlotFormDialog } from '../../components/slots/SlotFormDialog';
 
-type SortField = 'id' | 'name';
+type SortField = 'id' | 'name' | 'type';
 
 interface SlotFilters {
   search: string;
   status: 'active' | 'blocked' | 'all';
+  type: string; // 'all' or specific SlotType
 }
 
 export const SlotsListPage = memo(() => {
   const { t } = useTranslation();
   const { getDisplayName } = useMultilingualName();
   const { enqueueSnackbar } = useSnackbar();
+
+  // Helper to translate slot types
+  const getSlotTypeLabel = useCallback((type: string) => {
+    const typeKey = type.charAt(0).toLowerCase() + type.slice(1); // MainLarge -> mainLarge
+    return t(`slots.types.${typeKey}`);
+  }, [t]);
   const confirmDialog = useConfirmDialog();
   const formDialog = useDialogState<{ id?: string; data?: any }>();
   const [sortColumn, setSortColumn] = useState<SortField>('name');
@@ -51,6 +58,7 @@ export const SlotsListPage = memo(() => {
   const { filters, updateFilter, resetFilters, applyFilters } = useFilters<SlotFilters>({
     search: '',
     status: 'active',
+    type: 'all',
   });
   
   // Debounced search to prevent excessive filtering
@@ -64,6 +72,7 @@ export const SlotsListPage = memo(() => {
   } = useFilters<SlotFilters>({
     search: '',
     status: 'active',
+    type: 'all',
   });
 
   // Filter drawer
@@ -92,12 +101,16 @@ export const SlotsListPage = memo(() => {
   // Apply filters to slots
   const filteredSlots = useMemo(() => {
     return applyFilters(slots || [], (slot, currentFilters) => {
-      return commonFilters.applyCommonFilters(slot, {
+      const matchesCommon = commonFilters.applyCommonFilters(slot, {
         status: currentFilters.status,
         search: debouncedSearch,
       });
+      
+      const matchesType = currentFilters.type === 'all' || slot.type === currentFilters.type;
+      
+      return matchesCommon && matchesType;
     });
-  }, [slots, applyFilters, debouncedSearch, commonFilters]);
+  }, [slots, applyFilters, debouncedSearch, commonFilters, filters.type]);
 
   // Sorted slots
   const sortedSlots = useMemo(() => {
@@ -110,6 +123,9 @@ export const SlotsListPage = memo(() => {
       if (sortColumn === 'name') {
         aValue = getDisplayName(a.name);
         bValue = getDisplayName(b.name);
+      } else if (sortColumn === 'type') {
+        aValue = a.type;
+        bValue = b.type;
       } else {
         aValue = a[sortColumn];
         bValue = b[sortColumn];
@@ -156,12 +172,14 @@ export const SlotsListPage = memo(() => {
   const handleOpenFilters = useCallback(() => {
     updateTempFilter('search', filters.search);
     updateTempFilter('status', filters.status);
+    updateTempFilter('type', filters.type);
     filterDrawer.open();
   }, [filters, updateTempFilter, filterDrawer]);
 
   const handleApplyFilters = useCallback(() => {
     updateFilter('search', tempFilters.search);
     updateFilter('status', tempFilters.status);
+    updateFilter('type', tempFilters.type);
     filterDrawer.close();
   }, [tempFilters, updateFilter, filterDrawer]);
 
@@ -217,6 +235,13 @@ export const SlotsListPage = memo(() => {
         label: t('dictionaries.name'),
         sortable: true,
         render: (slot) => getDisplayName(slot.name),
+      },
+      {
+        id: 'type',
+        label: t('slots.fields.type'),
+        sortable: true,
+        width: '150px',
+        render: (slot) => getSlotTypeLabel(slot.type),
       },
       {
         id: 'isBlocked',
@@ -320,6 +345,19 @@ export const SlotsListPage = memo(() => {
             { value: 'active', label: t('common.active') },
             { value: 'blocked', label: t('common.blocked') },
             { value: 'all', label: t('common.all') },
+          ]}
+        />
+        <Select
+          name="type"
+          label={t('slots.fields.type')}
+          value={tempFilters.type || 'all'}
+          onChange={(value) => updateTempFilter('type', value as string)}
+          options={[
+            { value: 'all', label: t('common.all') },
+            { value: 'MainLarge', label: t('slots.types.mainLarge') },
+            { value: 'MainSmall', label: t('slots.types.mainSmall') },
+            { value: 'Selection', label: t('slots.types.selection') },
+            { value: 'Group', label: t('slots.types.group') },
           ]}
         />
       </FilterDrawer>

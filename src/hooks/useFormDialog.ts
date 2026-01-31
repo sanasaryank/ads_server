@@ -144,10 +144,10 @@ export function useFormDialog<TEntity, TFormData extends FieldValues>(
         
         if (isEditMode && editingEntity) {
           await config.update((editingEntity as any).id, apiData);
-          enqueueSnackbar(t('common.savedSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.saved'), { variant: 'success' });
         } else {
           await config.create(apiData);
-          enqueueSnackbar(t('common.createdSuccessfully'), { variant: 'success' });
+          enqueueSnackbar(t('common.success.created'), { variant: 'success' });
         }
 
         config.onSuccess?.();

@@ -35,15 +35,6 @@
       "unblocked": "Unblocked successfully",
       "saved": "Saved successfully"
     },
-    "error": {
-      "loadFailed": "Failed to load data",
-      "saveFailed": "Failed to save",
-      "deleteFailed": "Failed to delete"
-    },
-    "savedSuccessfully": "Saved successfully",
-    "createdSuccessfully": "Created successfully",
-    "deletedSuccessfully": "Deleted successfully",
-    "updatedSuccessfully": "Updated successfully",
     "logout": "Logout",
     "yes": "Yes",
     "no": "No",
@@ -209,10 +200,7 @@
     "quantityRequired": "Quantity is required",
     "quantityMin": "Minimum quantity is 1",
     "quantityMax": "Maximum quantity is 100",
-    "passwordRequired": "Password is required",
-    "quantityRequired": "Quantity is required",
-    "quantityMin": "Minimum 1",
-    "quantityMax": "Maximum 100"
+    "passwordRequired": "Password is required"
   },
   "pagination": {
     "rowsPerPage": "Rows per page:",
@@ -382,7 +370,6 @@
     "addTitle": "Add New Campaign",
     "editTitle": "Edit Campaign",
     "search": "Search campaigns...",
-    "searchPlaceholder": "Search campaigns...",
     "noCampaignsFound": "No campaigns found",
     "fields": {
       "advertiser": "Advertiser",
@@ -438,7 +425,6 @@
     "minWidth": "Min Width",
     "maxWidth": "Max Width",
     "dataUrl": "Data URL",
-    "preview": "Preview",
     "selectCampaign": "Select Campaign",
     "blockConfirmTitle": "Block creative?",
     "unblockConfirmTitle": "Unblock creative?",

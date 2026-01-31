@@ -352,7 +352,7 @@ const AdvertisersListPage = memo(() => {
           {
             name: 'blocked',
             label: t('advertisers.fields.blocked'),
-            type: 'checkbox',
+            type: 'switch',
           },
         ]}
       />

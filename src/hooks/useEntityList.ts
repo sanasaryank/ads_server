@@ -27,13 +27,13 @@ export function createSnackbarCallbacks(
       enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
     },
     onUpdateSuccess: () => {
-      enqueueSnackbar(t('common.updatedSuccessfully'), { variant: 'success' });
+      enqueueSnackbar(t('common.success.updated'), { variant: 'success' });
     },
     onUpdateError: () => {
       enqueueSnackbar(t('common.error'), { variant: 'error' });
     },
     onDeleteSuccess: () => {
-      enqueueSnackbar(t('common.deletedSuccessfully'), { variant: 'success' });
+      enqueueSnackbar(t('common.success.deleted'), { variant: 'success' });
     },
     onDeleteError: () => {
       enqueueSnackbar(t('common.error'), { variant: 'error' });

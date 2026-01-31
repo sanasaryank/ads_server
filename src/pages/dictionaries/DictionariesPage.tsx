@@ -154,7 +154,7 @@ export const DictionariesPage = memo(() => {
             // TODO: Implement dictionariesApi.block
             // await dictionariesApi.block(dictKey, item.id, !item.isBlocked);
             await loadData();
-            enqueueSnackbar(t('common.updatedSuccessfully'), { variant: 'success' });
+            enqueueSnackbar(t('common.success.updated'), { variant: 'success' });
           } catch (err) {
             logger.error('Error toggling block status', err as Error, { dictKey, itemId: item.id });
             enqueueSnackbar(t('common.error'), { variant: 'error' });

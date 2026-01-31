@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, memo, useEffect, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Stack, Typography, Tabs, Tab, Dialog, DialogTitle, DialogContent, IconButton as MuiIconButton, Backdrop, CircularProgress } from '@mui/material';
 import { Add as AddIcon, FilterList as FilterListIcon, Edit as EditIcon, Close as CloseIcon } from '@mui/icons-material';
-import { DataTable, SearchField, Pagination, ConfirmDialog, FilterDrawer, MultilingualNameField } from '../../components/ui/molecules';
+import { DataTable, SearchField, Pagination, ConfirmDialog, FilterDrawer, MultilingualNameField, SwitchField } from '../../components/ui/molecules';
 import type { Column } from '../../components/ui/molecules/DataTable';
 import { Button, IconButton, Switch, Select } from '../../components/ui/atoms';
 import { useTableState, useDebounce, useConfirmDialog, useDrawer, useFilters, useMultilingualName, useDialogState, useCampaignsData, useEditWithLoading, useCommonFilters } from '../../hooks';
@@ -697,10 +697,9 @@ export default memo(function CampaignsListPage() {
                     required
                   />
                 </Stack>
-                <FormField
-                  name="blocked"
+                <SwitchField
                   control={control}
-                  type="checkbox"
+                  name="blocked"
                   label={t('campaigns.fields.blocked')}
                 />
               </Stack>
