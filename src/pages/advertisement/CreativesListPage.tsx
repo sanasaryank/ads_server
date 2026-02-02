@@ -225,6 +225,7 @@ export default memo(function CreativesListPage() {
   const filterDrawer = useDrawer();
   const formDialog = useDialogState<{ id?: string; data?: Creative | null }>();
   const isMountedRef = useRef(true);
+  const fetchedUrlsRef = useRef<Set<string>>(new Set());
   
   // Edit with loading hook
   const { isLoading: isLoadingEdit, handleEdit } = useEditWithLoading<Creative>({
@@ -259,7 +260,7 @@ export default memo(function CreativesListPage() {
     campaignId: '',
   });
   
-  // Store fetched HTML content for external URLs (no caching - always fetch fresh)
+  // Store fetched HTML content for external URLs
   const [htmlContent, setHtmlContent] = useState<Record<string, string>>({});
   const [htmlLoading, setHtmlLoading] = useState<Record<string, boolean>>({});
   const [htmlErrors, setHtmlErrors] = useState<Record<string, boolean>>({});
@@ -446,14 +447,17 @@ export default memo(function CreativesListPage() {
   const endIndex = startIndex + rowsPerPage;
   const paginatedCreatives = filteredCreatives.slice(startIndex, endIndex);
   
-  // Load HTML for visible creatives (always fetch fresh - no caching)
+  // Load HTML for visible creatives - FIXED: only depend on paginatedCreatives to prevent infinite loop
   useEffect(() => {
-    isMountedRef.current = true;
     const loadVisibleHtml = async () => {
       const promises = paginatedCreatives.map(async (creative) => {
-        if (creative.dataUrl.startsWith('http') && !htmlLoading[creative.dataUrl] && !htmlErrors[creative.dataUrl]) {
+        // Only fetch external URLs that haven't been fetched yet (using ref to avoid re-fetching)
+        if (creative.dataUrl.startsWith('http') && !fetchedUrlsRef.current.has(creative.dataUrl)) {
+          fetchedUrlsRef.current.add(creative.dataUrl);
+          
           if (!isMountedRef.current) return;
           setHtmlLoading(prev => ({ ...prev, [creative.dataUrl]: true }));
+          
           try {
             const html = await fetchAndFixHtml(creative.dataUrl);
             if (!isMountedRef.current) return;
@@ -476,7 +480,7 @@ export default memo(function CreativesListPage() {
     };
     
     loadVisibleHtml();
-  }, [paginatedCreatives, htmlLoading, htmlErrors]);
+  }, [paginatedCreatives]); // FIX: Removed htmlLoading and htmlErrors from dependencies
   
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -488,6 +492,7 @@ export default memo(function CreativesListPage() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      fetchedUrlsRef.current.clear();
       setHtmlContent({});
       setHtmlLoading({});
       setHtmlErrors({});
