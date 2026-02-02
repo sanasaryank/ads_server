@@ -9,39 +9,21 @@ import { env } from '../../config/env';
 
 /**
  * Circuit Breaker to prevent cascading failures
+ * Note: Disabled by default to prevent blocking legitimate requests
  */
 class CircuitBreaker {
   private failures = 0;
   private lastFailTime = 0;
   private state: 'closed' | 'open' | 'half-open' = 'closed';
-  private readonly failureThreshold = 5; // Open after 5 failures
-  private readonly resetTimeout = 60000; // 60 seconds
+  private readonly failureThreshold = 100; // Very high threshold - essentially disabled
+  private readonly resetTimeout = 5000; // 5 seconds - short cooldown
 
   /**
    * Execute a function with circuit breaker protection
+   * Circuit breaker is effectively disabled with very high threshold
    */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
-    // Check if circuit is open
-    if (this.state === 'open') {
-      const timeSinceLastFail = Date.now() - this.lastFailTime;
-      
-      if (timeSinceLastFail > this.resetTimeout) {
-        // Try to recover - move to half-open state
-        this.state = 'half-open';
-        logger.info('Circuit breaker moving to half-open state', {
-          failures: this.failures,
-          timeSinceLastFail,
-        });
-      } else {
-        // Still in cooldown period
-        logger.warn('Circuit breaker is open - request rejected', {
-          failures: this.failures,
-          remainingCooldown: this.resetTimeout - timeSinceLastFail,
-        });
-        throw new Error('Circuit breaker is open - service temporarily unavailable');
-      }
-    }
-
+    // Circuit breaker is essentially disabled - just execute and track failures for monitoring
     try {
       const result = await fn();
       this.onSuccess();
@@ -56,14 +38,13 @@ class CircuitBreaker {
    * Handle successful execution
    */
   private onSuccess(): void {
-    if (this.state === 'half-open') {
-      // Recovered from half-open state
-      logger.info('Circuit breaker recovered - closing circuit', {
+    if (this.failures > 0) {
+      logger.debug('Request succeeded after failures', {
         previousFailures: this.failures,
       });
     }
     
-    // Reset to closed state
+    // Reset failure count
     this.failures = 0;
     this.state = 'closed';
   }
@@ -75,18 +56,11 @@ class CircuitBreaker {
     this.failures++;
     this.lastFailTime = Date.now();
 
-    if (this.state === 'half-open') {
-      // Failed in half-open state - reopen circuit
-      this.state = 'open';
-      logger.warn('Circuit breaker reopened after half-open failure', {
+    // Just log for monitoring - don't block requests
+    if (this.failures % 10 === 0) {
+      logger.warn('Multiple request failures detected', {
         failures: this.failures,
-      });
-    } else if (this.failures >= this.failureThreshold) {
-      // Too many failures - open circuit
-      this.state = 'open';
-      logger.error('Circuit breaker opened due to excessive failures', {
-        failures: this.failures,
-        threshold: this.failureThreshold,
+        note: 'Circuit breaker disabled - requests will continue',
       });
     }
   }
@@ -112,7 +86,7 @@ class CircuitBreaker {
   }
 }
 
-// Global circuit breaker instance
+// Global circuit breaker instance (effectively disabled)
 const circuitBreaker = new CircuitBreaker();
 
 const getAuthHeaders = (): HeadersInit => {
