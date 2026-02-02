@@ -1,11 +1,12 @@
-import { useCallback, useMemo, useState, memo } from 'react';
+import { useCallback, useMemo, useState, memo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSnackbar } from 'notistack';
-import { Box, Typography, Alert } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, FilterList as FilterListIcon } from '@mui/icons-material';
 import { dictionariesApi } from '../../api/endpoints';
 import { getDictionaryTitle } from '../../utils/dictionaryUtils';
+import { isApiError } from '../../api/errors';
 import type {
   DictionaryItemType,
   DictionaryFilters,
@@ -92,6 +93,17 @@ export const DictionariesPage = memo(() => {
       setItems(fetchedItems);
     }
   }, [fetchedItems]);
+
+  // Show toast on error
+  useEffect(() => {
+    if (fetchError) {
+      if (isApiError(fetchError)) {
+        enqueueSnackbar(fetchError.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(fetchError.message || t('error.unknown'), { variant: 'error' });
+      }
+    }
+  }, [fetchError, enqueueSnackbar, t]);
 
   // Apply filters to items
   const filteredItems = useMemo(() => {
@@ -259,12 +271,10 @@ export const DictionariesPage = memo(() => {
   if (!dictKey) {
     return (
       <Box>
-        <Alert severity="error">{t('dictionaries.invalidKey')}</Alert>
+        <Typography variant="h6" color="error">{t('dictionaries.invalidKey')}</Typography>
       </Box>
     );
   }
-
-  const error = fetchError?.message || null;
 
   return (
     <Box>
@@ -284,13 +294,6 @@ export const DictionariesPage = memo(() => {
           </Button>
         </Box>
       </Box>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
 
       {/* Data Table */}
       <DataTable

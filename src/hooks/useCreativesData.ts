@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSnackbar, type VariantType } from 'notistack';
 import { creativesApi, campaignsApi, advertisersApi } from '../api';
 import { logger } from '../utils/logger';
+import { isApiError } from '../api/errors';
 import type { Creative, Campaign, Advertiser } from '../types';
 
 /**
@@ -20,8 +21,12 @@ export function createCreativesDataCallback(
   t: (key: string) => string
 ): UseCreativesDataCallbacks {
   return {
-    onLoadError: () => {
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+    onLoadError: (error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
+      }
     },
   };
 }
@@ -78,7 +83,11 @@ export const useCreativesData = (options?: UseCreativesDataOptions) => {
       if (options?.callbacks?.onLoadError) {
         options.callbacks.onLoadError(error);
       } else {
-        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+        if (isApiError(error)) {
+          enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+        } else {
+          enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+        }
       }
     } finally {
       setLoading(false);

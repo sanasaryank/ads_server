@@ -90,7 +90,7 @@ export const SlotsListPage = memo(() => {
       if (isApiError(error)) {
         enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
       } else {
-        enqueueSnackbar(error.message || t('common.error.loadFailed'), { variant: 'error' });
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
       }
     }
   }, [error, enqueueSnackbar, t]);

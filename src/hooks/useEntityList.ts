@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSnackbar, type VariantType } from 'notistack';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../utils/logger';
+import { isApiError } from '../api/errors';
 
 /**
  * Helper to create default UI callbacks using snackbar notifications.
@@ -23,20 +24,32 @@ export function createSnackbarCallbacks(
   t: (key: string) => string
 ): UseEntityListCallbacks {
   return {
-    onLoadError: () => {
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+    onLoadError: (error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
+      }
     },
     onUpdateSuccess: () => {
       enqueueSnackbar(t('common.success.updated'), { variant: 'success' });
     },
-    onUpdateError: () => {
-      enqueueSnackbar(t('common.error'), { variant: 'error' });
+    onUpdateError: (error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
+      }
     },
     onDeleteSuccess: () => {
       enqueueSnackbar(t('common.success.deleted'), { variant: 'success' });
     },
-    onDeleteError: () => {
-      enqueueSnackbar(t('common.error'), { variant: 'error' });
+    onDeleteError: (error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
+      }
     },
   };
 }
@@ -214,7 +227,11 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
       if (config.callbacks?.onLoadError) {
         config.callbacks.onLoadError(error as Error);
       } else {
-        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+        if (isApiError(error)) {
+          enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+        } else {
+          enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+        }
       }
     } finally {
       if (isMountedRef.current) {
@@ -291,7 +308,11 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
           if (config.callbacks?.onUpdateError) {
             config.callbacks.onUpdateError(error as Error);
           } else {
-            enqueueSnackbar(t('common.error'), { variant: 'error' });
+            if (isApiError(error)) {
+              enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+            } else {
+              enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+            }
           }
         }
       };
@@ -327,7 +348,11 @@ export function useEntityList<TEntity extends { id: string | number; blocked?: b
           if (config.callbacks?.onDeleteError) {
             config.callbacks.onDeleteError(error as Error);
           } else {
-            enqueueSnackbar(t('common.error'), { variant: 'error' });
+            if (isApiError(error)) {
+              enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+            } else {
+              enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+            }
           }
         }
       };

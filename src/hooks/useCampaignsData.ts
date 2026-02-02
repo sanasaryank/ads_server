@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSnackbar, type VariantType } from 'notistack';
 import { campaignsApi, advertisersApi, dictionariesApi, restaurantsApi, schedulesApi } from '../api';
 import { logger } from '../utils/logger';
+import { isApiError } from '../api/errors';
 import { useDictionariesStore } from '../store/dictionariesStore';
 import { useRestaurantsStore } from '../store/restaurantsStore';
 import { useAdvertisersStore } from '../store/advertisersStore';
@@ -23,8 +24,12 @@ export function createCampaignsDataCallback(
   t: (key: string) => string
 ): UseCampaignsDataCallbacks {
   return {
-    onLoadError: () => {
-      enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+    onLoadError: (error) => {
+      if (isApiError(error)) {
+        enqueueSnackbar(error.getUserMessage(), { variant: 'error' });
+      } else {
+        enqueueSnackbar(error.message || t('error.unknown'), { variant: 'error' });
+      }
     },
   };
 }
@@ -108,7 +113,11 @@ export const useCampaignsData = (options?: UseCampaignsDataOptions) => {
       if (options?.callbacks?.onLoadError) {
         options.callbacks.onLoadError(error);
       } else {
-        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+        if (isApiError(error)) {
+          enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+        } else {
+          enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+        }
       }
     } finally {
       if (isMountedRef.current) {
@@ -185,7 +194,11 @@ export const useCampaignsData = (options?: UseCampaignsDataOptions) => {
       if (options?.callbacks?.onLoadError) {
         options.callbacks.onLoadError(error);
       } else {
-        enqueueSnackbar(t('common.error.loadFailed'), { variant: 'error' });
+        if (isApiError(error)) {
+          enqueueSnackbar((error as any).getUserMessage(), { variant: 'error' });
+        } else {
+          enqueueSnackbar((error as Error).message || t('error.unknown'), { variant: 'error' });
+        }
       }
     }
   };
